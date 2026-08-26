@@ -1,0 +1,235 @@
+﻿import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { useAuth } from "@/context/AuthContext";
+import BrandLogo from "@/components/BrandLogo";
+import ThemeSwitcher from "@/components/ThemeSwitcher";
+import {
+  LayoutDashboard,
+  Inbox,
+  Users,
+  LogOut,
+  Boxes,
+  Bell,
+  ChevronDown,
+  BarChart3,
+  Truck,
+  Settings,
+  Menu,
+  Clock,
+} from "lucide-react";
+import WasteInsightsModal from "@/components/WasteInsightsModal";
+import CalendarModal from "@/components/CalendarModal";
+import AccountSwitcherModal from "@/components/AccountSwitcherModal";
+
+interface NavItem {
+  label: string;
+  to: string;
+  icon: typeof LayoutDashboard;
+  badge?: number;
+}
+
+interface NavSection {
+  heading?: string;
+  items: NavItem[];
+}
+
+const STAFF_NAV_SECTIONS: NavSection[] = [
+  {
+    heading: "CORE",
+    items: [
+      { label: "Dashboard", to: "/retailer/dashboard", icon: LayoutDashboard },
+      { label: "Inventory", to: "/retailer/inventory", icon: Boxes },
+      { label: "Expiry Intelligence", to: "/retailer/expiry-intelligence", icon: Clock },
+    ],
+  },
+  {
+    heading: "OPERATIONS",
+    items: [
+      { label: "Requests", to: "/retailer/requests", icon: Inbox, badge: 3 },
+      { label: "Suppliers", to: "/retailer/suppliers", icon: Truck },
+    ],
+  },
+  {
+    heading: "INSIGHTS",
+    items: [
+      { label: "Reports", to: "/retailer/reports", icon: BarChart3 },
+      { label: "Alerts & Notifications", to: "/retailer/alerts", icon: Bell, badge: 12 },
+    ],
+  },
+  {
+    heading: "STAFF MANAGEMENT",
+    items: [
+      { label: "Team Users", to: "/retailer/users", icon: Users },
+      { label: "Station Settings", to: "/retailer/settings", icon: Settings },
+    ],
+  },
+];
+
+export default function StaffLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [insightsOpen, setInsightsOpen] = useState(false);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [accountSwitcherOpen, setAccountSwitcherOpen] = useState(false);
+
+  const handleLogout = () => {
+    logout();
+    navigate("/");
+  };
+
+  const today = new Date().toLocaleDateString("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
+
+  const SidebarContent = () => (
+    <div className="h-full flex flex-col bg-card border-r border-border text-foreground font-sans ern-card-glow">
+      {/* Logo */}
+      <div className="px-5 py-4 border-b border-border">
+        <NavLink to="/retailer/dashboard" className="flex items-center gap-3 hover:opacity-90 transition-opacity">
+          <BrandLogo variant="auto" size="sm" showText={true} />
+        </NavLink>
+      </div>
+
+      {/* Nav List */}
+      <nav className="flex-1 overflow-y-auto px-3.5 py-4 space-y-5">
+        {STAFF_NAV_SECTIONS.map((section, idx) => (
+          <div key={idx} className="space-y-1">
+            {section.heading && (
+              <p className="px-3.5 text-[10px] font-mono uppercase tracking-wider text-muted-foreground font-bold">
+                {section.heading}
+              </p>
+            )}
+            {section.items.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                onClick={() => setSidebarOpen(false)}
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3.5 py-2 rounded-full text-xs font-semibold ern-shimmer-hover ${
+                    isActive
+                      ? "bg-primary text-primary-foreground shadow-none font-bold"
+                      : "text-foreground ern-nav-link-pill-hover"
+                  }`
+                }
+              >
+                <div className="flex items-center gap-2.5">
+                  <item.icon className="size-4 shrink-0" />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge !== undefined && (
+                  <span className="px-2 py-0.5 rounded-full bg-accent text-accent-foreground text-[10px] font-mono font-bold">
+                    {item.badge}
+                  </span>
+                )}
+              </NavLink>
+            ))}
+          </div>
+        ))}
+      </nav>
+
+      {/* Footer User Profile */}
+      <div className="p-3.5 border-t border-border space-y-2">
+        <button
+          type="button"
+          onClick={() => setAccountSwitcherOpen(true)}
+          className="w-full flex items-center justify-between p-2.5 rounded-2xl bg-secondary/60 hover:bg-secondary ern-shimmer-hover text-left cursor-pointer"
+        >
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="size-8 rounded-full bg-primary text-primary-foreground font-mono text-xs flex items-center justify-center font-bold shrink-0 ern-icon-hover">
+              {user?.name?.[0] || "S"}
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs font-bold text-foreground truncate">{user?.name || "Operations Staff"}</p>
+              <p className="text-[10px] text-muted-foreground font-mono truncate">{user?.email || "staff@enterprise.io"}</p>
+            </div>
+          </div>
+          <ChevronDown className="size-3.5 text-muted-foreground shrink-0" />
+        </button>
+
+        <button
+          type="button"
+          onClick={handleLogout}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-full text-xs font-mono font-bold text-muted-foreground hover:text-foreground hover:bg-secondary/60 ern-shimmer-hover cursor-pointer"
+        >
+          <LogOut className="size-3.5" />
+          <span>SIGN OUT</span>
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex font-sans">
+      {/* Desktop Sidebar */}
+      <aside className="hidden lg:block w-64 h-screen sticky top-0 shrink-0">
+        <SidebarContent />
+      </aside>
+
+      {/* Mobile Sidebar */}
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-xs" onClick={() => setSidebarOpen(false)} />
+          <div className="relative w-64 max-w-[80vw] h-full bg-card z-10">
+            <SidebarContent />
+          </div>
+        </div>
+      )}
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top Header */}
+        <header className="h-16 px-4 sm:px-8 border-b border-border bg-card sticky top-0 z-30 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-full text-foreground hover:bg-secondary ern-icon-hover cursor-pointer"
+            >
+              <Menu className="size-5" />
+            </button>
+            <div className="hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-full bg-secondary text-foreground font-mono text-xs uppercase font-bold border border-border">
+              <span className="size-1.5 rounded-full bg-primary" />
+              <span>OPERATIONS DESK · {today}</span>
+            </div>
+          </div>
+
+          {/* Right Header Actions & Theme Switcher */}
+          <div className="flex items-center gap-2.5">
+            <ThemeSwitcher variant="compact" />
+
+            <button
+              type="button"
+              onClick={() => setCalendarOpen(true)}
+              className="px-3.5 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 text-xs font-mono font-bold text-foreground ern-btn-hover cursor-pointer hidden md:flex items-center gap-1.5"
+            >
+              <span>Calendar</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setInsightsOpen(true)}
+              className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 text-xs font-mono font-bold ern-btn-hover cursor-pointer flex items-center gap-1.5 shadow-none"
+            >
+              <span>Waste Radar</span>
+            </button>
+          </div>
+        </header>
+
+        {/* Page Content Viewport */}
+        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+          <Outlet />
+        </main>
+      </div>
+
+      {/* Modals */}
+      <WasteInsightsModal isOpen={insightsOpen} onClose={() => setInsightsOpen(false)} />
+      <CalendarModal isOpen={calendarOpen} onClose={() => setCalendarOpen(false)} />
+      <AccountSwitcherModal
+        isOpen={accountSwitcherOpen}
+        onClose={() => setAccountSwitcherOpen(false)}
+      />
+    </div>
+  );
+}

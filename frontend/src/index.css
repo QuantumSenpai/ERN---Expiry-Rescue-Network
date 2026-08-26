@@ -1,0 +1,655 @@
+@import "tailwindcss";
+
+/* Dark utilities must follow the html.dark class, NOT prefers-color-scheme.
+   Without this, OS dark mode paints snow-white text on the light canvas. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  --background:          #FFFFFF;
+  --foreground:           #2F4156;
+  --card:                #FFFFFF;
+  --card-foreground:      #2F4156;
+  --popover:             #FFFFFF;
+  --popover-foreground:   #2F4156;
+  --primary:              #2F4156;
+  --primary-foreground:  #FFFFFF;
+  --secondary:           #C8D9E6;
+  --secondary-foreground: #2F4156;
+  --muted:                #C8D9E6;
+  --muted-foreground:    #567C8D;
+  --accent:              #2F4156;
+  --accent-foreground:   #FFFFFF;
+  --destructive:         #D64545;
+  --destructive-foreground: #FFFFFF;
+  --border:              rgba(47, 65, 86, 0.15);
+  --input:                #C8D9E6;
+  --ring:                 #2F4156;
+
+  /* ── Typography ──────────────────────────────────────────────── */
+  --font-display:  "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-script:   "Caveat", cursive;
+  --font-sans:     "Inter", "Poppins", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-mono:     "JetBrains Mono", ui-monospace, monospace;
+
+  --font-poster:   "Poppins", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-body:     "Inter", "Poppins", ui-sans-serif, system-ui, sans-serif;
+  --font-display-script: "Caveat", cursive;
+
+  /* ── Radii ────────────────────────────────────────────────────── */
+  --radius:             8px;
+  --radius-tags:        9999px;
+  --radius-cards:       16px;
+  --radius-large-cards: 32px;
+  --radius-buttons:     9999px;
+  --radius-full:        9999px;
+  --radius-inputs:      8px;
+  --radius-badges:      9999px;
+}
+
+/* ── Dark Mode ────────────────────────────────────────────────── */
+.dark {
+  --background:          #C8D9E6;
+  --foreground:          #2F4156;
+  --card:                #D8E6F0;
+  --card-foreground:     #2F4156;
+  --popover:             #D8E6F0;
+  --popover-foreground:  #2F4156;
+  --primary:             #2F4156;
+  --primary-foreground:  #F5EFEB;
+  --secondary:           #B8CCDC;
+  --secondary-foreground: #2F4156;
+  --muted:               #B8CCDC;
+  --muted-foreground:    #567C8D;
+  --accent:              #2F4156;
+  --accent-foreground:   #F5EFEB;
+  --destructive:         #D64545;
+  --destructive-foreground: #F5EFEB;
+  --border:              rgba(47, 65, 86, 0.15);
+  --input:               #B8CCDC;
+  --ring:                #2F4156;
+}
+
+/* ── Tailwind v4 @theme block ─────────────────────────────────── */
+@theme {
+  /* Dynamic Semantic Color Aliases */
+  --color-background:         var(--background);
+  --color-foreground:         var(--foreground);
+  --color-card:               var(--card);
+  --color-card-foreground:    var(--card-foreground);
+  --color-popover:            var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary:            var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary:          var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted:              var(--muted);
+  --color-muted-foreground:   var(--muted-foreground);
+  --color-accent:             var(--accent);
+  --color-accent-foreground:  var(--accent-foreground);
+  --color-destructive:        var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border:             var(--border);
+  --color-input:              var(--input);
+  --color-ring:               var(--ring);
+
+  /* Font families */
+--font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+--font-poster: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+--font-script: "Caveat", cursive;
+--font-sans: "Inter", "Space Grotesk", ui-sans-serif, system-ui, -apple-system, sans-serif;
+--font-mono: "JetBrains Mono", ui-monospace, monospace;
+--font-body: "Inter", "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+
+  /* Radii */
+  --radius-cards:       16px;
+  --radius-large-cards: 32px;
+  --radius-full:        9999px;
+  --radius-buttons:     9999px;
+  --radius-inputs:      8px;
+  --radius-badges:      9999px;
+}
+
+/* ── Base Layer ───────────────────────────────────────────────── */
+@layer base {
+  * {
+    border-color: var(--border);
+    outline-color: var(--primary);
+  }
+
+  html {
+    background-color: var(--background);
+    color: var(--foreground);
+    color-scheme: light;
+    font-family: var(--font-sans);
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  /* ── Form Controls & Native Dropdown Visibility Fix ────────── */
+  select,
+  input,
+  textarea {
+    color-scheme: light;
+  }
+
+  .dark select,
+  .dark input,
+  .dark textarea {
+    color-scheme: dark;
+  }
+
+  select option,
+  select optgroup {
+    background-color: #FFFFFF;
+    color:  #2F4156;
+  }
+
+  .dark select option,
+  .dark select optgroup {
+    background-color: #161E11;
+    color: #2F4156;
+  }
+
+  /* Autofill contrast fix */
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus,
+  textarea:-webkit-autofill,
+  select:-webkit-autofill {
+    -webkit-text-fill-color: var(--foreground);
+    -webkit-box-shadow: 0 0 0px 1000px var(--background) inset;
+    transition: background-color 5000s ease-in-out 0s;
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  h1, h2, h3, h4 {
+    font-family: var(--font-display);
+    font-weight: 500;
+    letter-spacing: -0.015em;
+    line-height: 1.1;
+  }
+
+  .font-script {
+    font-family: var(--font-display-script) !important;
+    font-weight: 700;
+  }
+
+  .font-poster {
+    font-family: var(--font-display) !important;
+    font-weight: 500;
+  }
+
+  code, pre, .font-mono {
+    font-family: var(--font-mono);
+    letter-spacing: 0.015em;
+  }
+
+  /* ── Surface Utilities ─────────────────────────────────────── */
+  .surface-canvas {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  .surface-card {
+    background-color: var(--card);
+    color: var(--foreground);
+  }
+
+  .surface-forest {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+  }
+
+  .surface-deep {
+    background-color: var(--background);
+    color: var(--foreground);
+  }
+
+  .surface-chip {
+    background-color: var(--secondary);
+    color: var(--foreground);
+  }
+
+  .dotted-divider {
+    border-bottom: 1px dotted rgba(28, 58, 19, 0.25);
+  }
+}
+
+/* ── Global: Zero shadows, zero gradients ─────────────────────── */
+*, *::before, *::after {
+  box-shadow: none !important;
+  text-shadow: none !important;
+}
+
+/* ── Isometric 3D Animation ───────────────────────────────────── */
+@keyframes floatBob {
+  0%, 100% {
+    transform: translateY(0px) rotateX(24deg) rotateY(-24deg);
+  }
+  50% {
+    transform: translateY(-14px) rotateX(28deg) rotateY(-20deg);
+  }
+}
+
+.animate-float-bob {
+  animation: floatBob 5s ease-in-out infinite;
+}
+
+/* ── 3D Geometry Transform Helpers ───────────────────────────── */
+.perspective-1000 {
+  perspective: 1000px;
+}
+.perspective-1200 {
+  perspective: 1200px;
+}
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+.backface-hidden {
+  backface-visibility: hidden;
+}
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ERN Hover Interaction & Smooth Animation System — v2.0
+   ══════════════════════════════════════════════════════════════════ */
+
+.ern-hover {
+  transition:
+    transform        300ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 250ms ease,
+    border-color     250ms ease,
+    color            200ms ease,
+    box-shadow       300ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity          200ms ease;
+}
+
+.ern-btn-hover {
+  transition:
+    transform        250ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 200ms ease,
+    border-color     200ms ease,
+    color            200ms ease,
+    box-shadow       250ms ease;
+  cursor: pointer;
+}
+.ern-btn-hover:hover {
+  transform: translateY(-1.5px);
+  filter: brightness(1.04);
+}
+.ern-btn-hover:active {
+  transform: translateY(0.5px) scale(0.98);
+  filter: brightness(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ern-btn-hover:hover,
+  .ern-btn-hover:active {
+    transform: none !important;
+  }
+}
+
+.ern-card-hover {
+  transition:
+    transform        300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color     300ms ease,
+    box-shadow       300ms cubic-bezier(0.16, 1, 0.3, 1);
+  cursor: pointer;
+}
+.ern-card-hover:hover {
+  transform: translateY(-3px);
+}
+.ern-card-hover:active {
+  transform: translateY(-1px) scale(0.995);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ern-card-hover:hover,
+  .ern-card-hover:active {
+    transform: none !important;
+  }
+}
+
+.ern-nav-link-hover {
+  position: relative;
+  transition:
+    color            200ms ease,
+    background-color 200ms ease;
+}
+.ern-nav-link-hover::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 0%;
+  height: 2px;
+  background-color: var(--accent);
+  border-radius: 9999px;
+  transition: width 250ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ern-nav-link-hover:hover {
+  color: var(--accent) !important;
+}
+.ern-nav-link-hover:hover::after {
+  width: 100%;
+}
+.ern-nav-link-pill-hover {
+  transition:
+    color            200ms ease,
+    background-color 200ms ease,
+    transform        200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ern-nav-link-pill-hover:hover {
+  color: var(--accent) !important;
+  background-color: color-mix(in srgb, var(--secondary) 60%, transparent);
+  transform: translateY(-1px);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ern-nav-link-hover::after {
+    transition: none;
+  }
+}
+
+.ern-icon-hover {
+  transition:
+    transform        250ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 200ms ease,
+    color            200ms ease;
+}
+.ern-icon-hover:hover {
+  transform: scale(1.08);
+  filter: brightness(1.08);
+}
+.ern-icon-hover:active {
+  transform: scale(0.95);
+}
+@media (prefers-reduced-motion: reduce) {
+  .ern-icon-hover:hover,
+  .ern-icon-hover:active {
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+.ern-row-hover {
+  transition: background-color 200ms ease;
+  cursor: pointer;
+}
+.ern-row-hover:hover {
+  background-color: color-mix(in srgb, var(--secondary) 50%, transparent);
+}
+
+.ern-toggle-hover {
+  transition:
+    background-color 150ms ease,
+    color            150ms ease,
+    transform        150ms ease;
+}
+.ern-toggle-hover:hover {
+  background-color: color-mix(in srgb, var(--secondary) 70%, transparent);
+  transform: scale(1.02);
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ERN Shimmer Light-Sweep Hover Interaction — v1.0
+   ══════════════════════════════════════════════════════════════════ */
+
+.ern-shimmer-hover {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform        250ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow       250ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color     200ms ease,
+    background-color 200ms ease;
+}
+
+.ern-shimmer-hover::before {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 300%;
+  height: 300%;
+  border-radius: inherit;
+  background: linear-gradient(
+    45deg,
+    transparent 42%,
+    color-mix(in srgb, var(--accent) 18%, transparent) 50%,
+    transparent 58%
+  );
+  pointer-events: none;
+  z-index: 2;
+  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease;
+  opacity: 0;
+}
+
+.ern-shimmer-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -4px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+
+.ern-shimmer-hover:hover::before {
+  transform: translate(65%, 65%);
+  opacity: 1;
+}
+
+.ern-shimmer-hover:active {
+  transform: translateY(0.5px) scale(0.985);
+}
+
+/* Critical variant for destructive/warning action triggers */
+.ern-shimmer-hover--critical {
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform        250ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow       250ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color     200ms ease,
+    background-color 200ms ease;
+}
+
+.ern-shimmer-hover--critical::before {
+  content: '';
+  position: absolute;
+  top: -150%;
+  left: -150%;
+  width: 300%;
+  height: 300%;
+  border-radius: inherit;
+  background: linear-gradient(
+    45deg,
+    transparent 42%,
+    rgba(220, 38, 38, 0.22) 50%,
+    transparent 58%
+  );
+  pointer-events: none;
+  z-index: 2;
+  transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 300ms ease;
+  opacity: 0;
+}
+
+.ern-shimmer-hover--critical:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px -4px rgba(220, 38, 38, 0.25);
+}
+
+.ern-shimmer-hover--critical:hover::before {
+  transform: translate(65%, 65%);
+  opacity: 1;
+}
+
+.ern-shimmer-hover--critical:active {
+  transform: translateY(0.5px) scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ern-shimmer-hover,
+  .ern-shimmer-hover--critical {
+    transform: none !important;
+  }
+  .ern-shimmer-hover::before,
+  .ern-shimmer-hover--critical::before {
+    display: none !important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ERN Dark Mode Spotlight Border-Glow System — v2.1 (Smooth Hover)
+   ══════════════════════════════════════════════════════════════════ */
+
+.ern-card-glow,
+.ern-card-glow--critical {
+  position: relative;
+  transition:
+    transform        300ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color     300ms ease,
+    box-shadow       300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ── Standard Dark Mode Spotlight Card Glow (Warm Lime Green) ── */
+.dark .ern-card-glow::before,
+.dark .ern-card-glow--critical::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    75% 55% at 50% 0%,
+    color-mix(in srgb, #567C8D 85%, transparent) 0%,
+    color-mix(in srgb, #567C8D 30%, transparent) 50%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.7;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .ern-card-glow::after,
+.dark .ern-card-glow--critical::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    60% 45% at 50% 0%,
+    color-mix(in srgb, #567C8D 14%, transparent) 0%,
+    color-mix(in srgb, #567C8D 3%, transparent) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+
+/* On hover: intensified aura and smooth highlight */
+.dark .ern-card-glow:hover::before,
+.dark .ern-card-glow--critical:hover::before {
+  opacity: 1;
+}
+
+.dark .ern-card-glow:hover::after,
+.dark .ern-card-glow--critical:hover::after {
+  opacity: 1;
+}
+
+/* Ensure direct children sit cleanly on top of glow layers */
+.dark .ern-card-glow > *,
+.dark .ern-card-glow--critical > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   ERN Light Mode Spotlight Border-Glow System (Teal)
+   ══════════════════════════════════════════════════════════════════ */
+
+.ern-card-glow::before,
+.ern-card-glow--critical::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: radial-gradient(
+    75% 55% at 50% 0%,
+    color-mix(in srgb, #567C8D 85%, transparent) 0%,
+    color-mix(in srgb, #567C8D 30%, transparent) 50%,
+    transparent 100%
+  );
+  -webkit-mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#fff 0 0) content-box,
+    linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.5;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ern-card-glow::after,
+.ern-card-glow--critical::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    60% 45% at 50% 0%,
+    color-mix(in srgb, #567C8D 14%, transparent) 0%,
+    color-mix(in srgb, #567C8D 3%, transparent) 60%,
+    transparent 100%
+  );
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.4;
+  transition: opacity 300ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ern-card-glow:hover::before,
+.ern-card-glow--critical:hover::before {
+  opacity: 1;
+}
+
+.ern-card-glow:hover::after,
+.ern-card-glow--critical:hover::after {
+  opacity: 1;
+}
+
+.ern-card-glow > *,
+.ern-card-glow--critical > * {
+  position: relative;
+  z-index: 1;
+}
+
+.dark .ern-card-glow:hover {
+  box-shadow: 0 0 24px -6px #567C8D !important;
+}
