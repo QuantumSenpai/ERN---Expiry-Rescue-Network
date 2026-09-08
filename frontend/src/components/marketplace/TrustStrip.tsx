@@ -1,91 +1,60 @@
-﻿import { motion } from "framer-motion";
-import { ShieldCheck, Tag, Clock, Lock, RefreshCw } from "lucide-react";
-
-const trustContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.05,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const trustItemVariants = {
-  hidden: { opacity: 0, y: 14 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0, 0, 0.2, 1] as const,
-    },
-  },
-};
+import { Calendar, Tag, Layers, CheckCircle2, Headphones } from "lucide-react";
 
 export default function TrustStrip() {
   const trustItems = [
     {
-      icon: ShieldCheck,
-      title: "QUALITY CHECKED",
-      subtitle: "Verified lot telemetry",
+      icon: Calendar,
+      title: "EXPIRY DATES SHOWN",
+      subtitle: "Exact days left on every item",
     },
     {
       icon: Tag,
-      title: "SMART SAVINGS",
-      subtitle: "Dynamic markdown curve",
+      title: "CLEAR SAVINGS",
+      subtitle: "See ₹ savings before checkout",
     },
     {
-      icon: Clock,
-      title: "EXPIRY MONITOR",
-      subtitle: "Full shelf-life visibility",
+      icon: Layers,
+      title: "BATCH CHOICES",
+      subtitle: "Choose fresh or rescue batches",
     },
     {
-      icon: Lock,
-      title: "SECURE PAYMENTS",
-      subtitle: "256-bit encrypted checkout",
+      icon: CheckCircle2,
+      title: "STOCK AVAILABILITY",
+      subtitle: "Clear quantity limits on deals",
     },
     {
-      icon: RefreshCw,
-      title: "ZERO LOSS POLICY",
-      subtitle: "Guaranteed satisfaction",
+      icon: Headphones,
+      title: "HELP & SUPPORT",
+      subtitle: "Prompt help with any order",
     },
   ];
 
   return (
     <section className="py-4 px-4 sm:px-6 lg:px-8 border-b border-border bg-card text-foreground font-body">
       <div className="max-w-[1440px] mx-auto">
-        <motion.div
-          variants={trustContainerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 sm:gap-6"
-        >
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
           {trustItems.map((item) => {
             const Icon = item.icon;
             return (
-              <motion.div
+              <div
                 key={item.title}
-                variants={trustItemVariants}
                 className="flex items-center gap-3 p-2 rounded-xl"
               >
-                <div className="size-9 rounded-full bg-background flex items-center justify-center text-foreground shrink-0">
+                <div className="size-8 sm:size-9 rounded-full bg-secondary flex items-center justify-center text-primary shrink-0 border border-border">
                   <Icon className="size-4" />
                 </div>
                 <div className="min-w-0 font-mono">
-                  <h4 className="text-xs uppercase font-medium text-foreground tracking-tight">
+                  <h4 className="text-[11px] sm:text-xs uppercase font-bold text-foreground tracking-tight truncate">
                     {item.title}
                   </h4>
-                  <p className="text-[11px] text-muted-foreground font-body truncate">
+                  <p className="text-[10.5px] text-muted-foreground font-sans truncate">
                     {item.subtitle}
                   </p>
                 </div>
-              </motion.div>
+              </div>
             );
           })}
-        </motion.div>
+        </div>
       </div>
     </section>
   );
