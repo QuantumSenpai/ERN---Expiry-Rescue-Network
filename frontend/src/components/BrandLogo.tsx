@@ -1,4 +1,6 @@
-﻿import { useTheme } from "@/context/ThemeContext";
+import { useTheme } from "@/context/ThemeContext";
+import logoDark from "@/assets/logos/logo-dark.png";
+import logoLight from "@/assets/logos/logo-light.png";
 
 interface BrandLogoProps {
   variant?: "main" | "mono" | "compact" | "auto";
@@ -42,15 +44,27 @@ export default function BrandLogo({
       <div className="relative flex items-center justify-center shrink-0">
         {isDark ? (
           <img
-            src="/logos/logo-dark.png"
+            src={logoDark}
             alt="ERN Dark Logo"
             className={`${iconSizes} object-contain rounded-xl mix-blend-screen transition-transform duration-300 group-hover:scale-105`}
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src !== "/logos/logo-dark.png") {
+                img.src = "/logos/logo-dark.png";
+              }
+            }}
           />
         ) : (
           <img
-            src="/logos/logo-light.png"
+            src={logoLight}
             alt="ERN Light Logo"
             className={`${iconSizes} object-contain rounded-xl mix-blend-multiply transition-transform duration-300 group-hover:scale-105`}
+            onError={(e) => {
+              const img = e.currentTarget;
+              if (img.src !== "/logos/logo-light.png") {
+                img.src = "/logos/logo-light.png";
+              }
+            }}
           />
         )}
       </div>
