@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff as EyeClosed, ShieldCheck, UserCheck, Users } from 'lucide-react';
@@ -315,16 +315,15 @@ export function SignInCard({
                     </span>
                   </label>
 
-                  <a
-                    href="#"
-                    onClick={(e) => {
-                      e.preventDefault();
+                  <button
+                    type="button"
+                    onClick={() => {
                       alert("Password reset instructions sent to your email!");
                     }}
-                    className="font-sans text-primary hover:underline font-semibold transition-colors"
+                    className="font-sans text-primary hover:underline font-semibold transition-colors cursor-pointer bg-transparent border-0 p-0"
                   >
                     Forgot password?
-                  </a>
+                  </button>
                 </motion.div>
 
                 {/* Primary CTA: Sign In → */}
