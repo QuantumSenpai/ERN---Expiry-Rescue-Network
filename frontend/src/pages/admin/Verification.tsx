@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ShieldCheck,
   Clock,
@@ -10,292 +10,299 @@ import {
   Store,
   Search,
   X,
+  RefreshCw,
+  AlertTriangle,
 } from "lucide-react";
-
-type EntityType = "User" | "Supplier" | "Organization";
-type VStatus = "Pending" | "Under Review" | "Verified" | "Rejected";
-
-interface VerificationEntry {
-  id: string;
-  type: EntityType;
-  name: string;
-  contact: string;
-  submittedDate: string;
-  status: VStatus;
-  documents: string[];
-  notes?: string;
-}
-
-const MOCK_VERIFICATIONS: VerificationEntry[] = [
-  { id: "VR-1001", type: "Supplier", name: "GreenLeaf Distributors", contact: "ops@greenleaf.com", submittedDate: "2026-08-15", status: "Pending", documents: ["GST Certificate", "FSSAI License", "Bank Proof"] },
-  { id: "VR-1002", type: "User", name: "Ritika Sen", contact: "ritika.sen@mail.com", submittedDate: "2026-08-14", status: "Under Review", documents: ["Govt ID"] },
-  { id: "VR-1003", type: "Organization", name: "Kolkata Food Bank Trust", contact: "contact@kfbtrust.org", submittedDate: "2026-08-12", status: "Verified", documents: ["Registration Cert", "PAN", "Trust Deed"], notes: "All documents verified against registry." },
-  { id: "VR-1004", type: "Supplier", name: "Daily Fresh Mart", contact: "admin@dailyfresh.in", submittedDate: "2026-08-11", status: "Rejected", documents: ["GST Certificate"], notes: "FSSAI license expired, resubmission required." },
-  { id: "VR-1005", type: "User", name: "Arjun Mehta", contact: "arjun.m@mail.com", submittedDate: "2026-08-10", status: "Pending", documents: ["Govt ID", "Address Proof"] },
-  { id: "VR-1006", type: "Organization", name: "Hope & Harvest NGO", contact: "info@hopeharvest.org", submittedDate: "2026-08-08", status: "Under Review", documents: ["Registration Cert"] },
-];
-
-function useAnimatedNumber(target: number, duration = 800) {
-  const [value, setValue] = useState(0);
-  useEffect(() => {
-    let start: number | null = null;
-    let raf: number;
-    const step = (ts: number) => {
-      if (start === null) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      setValue(Math.round(progress * target));
-      if (progress < 1) raf = requestAnimationFrame(step);
-    };
-    raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return value;
-}
-
-function AnimatedNumber({ value }: { value: number }) {
-  return <>{useAnimatedNumber(value)}</>;
-}
-
-const STATUS_STYLES: Record<VStatus, string> = {
-  Pending: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40 font-bold",
-  "Under Review": "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 dark:border dark:border-sky-800/40 font-bold",
-  Verified: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border dark:border-emerald-800/40 font-bold",
-  Rejected: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 dark:border dark:border-rose-800/40 font-bold",
-};
-
-const TYPE_ICON: Record<EntityType, typeof User> = {
-  User: User,
-  Supplier: Store,
-  Organization: Building2,
-};
+import { api, type PendingUser } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
+import SkeletonLoader from "@/components/SkeletonLoader";
+import AnimatedNumber from "@/components/AnimatedNumber";
 
 export default function AdminVerification() {
-  const [entries, setEntries] = useState(MOCK_VERIFICATIONS);
+  const { showToast } = useToast();
+
+  const [pendingUsers, setPendingUsers] = useState<PendingUser[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<VStatus | "All">("All");
-  const [selected, setSelected] = useState<VerificationEntry | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
+  const [processingId, setProcessingId] = useState<number | null>(null);
 
-  const counts = useMemo(
-    () => ({
-      Pending: entries.filter((e) => e.status === "Pending").length,
-      "Under Review": entries.filter((e) => e.status === "Under Review").length,
-      Verified: entries.filter((e) => e.status === "Verified").length,
-      Rejected: entries.filter((e) => e.status === "Rejected").length,
-    }),
-    [entries]
-  );
+  const fetchPending = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await api.admin.pendingUsers();
+      setPendingUsers(data);
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Failed to load pending registrations.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
 
-  const filtered = useMemo(
-    () =>
-      entries.filter((e) => {
-        const matchesSearch =
-          e.name.toLowerCase().includes(search.toLowerCase()) ||
-          e.contact.toLowerCase().includes(search.toLowerCase());
-        const matchesStatus = statusFilter === "All" || e.status === statusFilter;
-        return matchesSearch && matchesStatus;
-      }),
-    [entries, search, statusFilter]
-  );
+  useEffect(() => {
+    fetchPending();
+  }, [fetchPending]);
 
-  const updateStatus = (id: string, status: VStatus) => {
-    setEntries((prev) =>
-      prev.map((e) => (e.id === id ? { ...e, status, notes: noteDraft || e.notes } : e))
-    );
-    setSelected((prev) => (prev ? { ...prev, status, notes: noteDraft || prev.notes } : prev));
+  const handleVerify = async (user: PendingUser) => {
+    setProcessingId(user.id);
+    try {
+      await api.admin.verifyUser(user.id);
+      showToast(`Approved registration for ${user.name}. Portal access activated.`);
+      setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        showToast(err.message, "error");
+      } else {
+        showToast("Verification failed.", "error");
+      }
+    } finally {
+      setProcessingId(null);
+    }
   };
 
-  const kpis: { label: string; value: number; icon: typeof Clock }[] = [
-    { label: "Pending", value: counts.Pending, icon: Clock },
-    { label: "Under Review", value: counts["Under Review"], icon: Eye },
-    { label: "Verified", value: counts.Verified, icon: CheckCircle2 },
-    { label: "Rejected", value: counts.Rejected, icon: XCircle },
-  ];
+  const handleReject = async (user: PendingUser) => {
+    if (!window.confirm(`Reject and delete registration for "${user.name}"?`)) {
+      return;
+    }
+
+    setProcessingId(user.id);
+    try {
+      await api.admin.rejectUser(user.id);
+      showToast(`Rejected registration for ${user.name}.`, "info");
+      setPendingUsers((prev) => prev.filter((u) => u.id !== user.id));
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        showToast(err.message, "error");
+      } else {
+        showToast("Rejection failed.", "error");
+      }
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return pendingUsers.filter(
+      (u) =>
+        q === "" ||
+        u.name.toLowerCase().includes(q) ||
+        u.email.toLowerCase().includes(q) ||
+        u.role.toLowerCase().includes(q)
+    );
+  }, [pendingUsers, search]);
 
   return (
-    <div className="space-y-6">
-      <div>
-        <span className="inline-block px-3 py-1 rounded-full bg-[#C8D9E6] text-[#2F4156] text-xs font-mono mb-2">
-          OPERATIONS
-        </span>
-        <h1 className="font-display text-3xl text-foreground">Verification</h1>
-        <p className="text-muted-foreground mt-1">
-          Review and approve pending users, suppliers, and organizations.
-        </p>
-      </div>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {kpis.map((k) => (
-          <div
-            key={k.label}
-            className="rounded-[24px] ern-card-glow border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] bg-card p-5"
-          >
-            <div className="flex items-center justify-between mb-2">
-              <k.icon className="w-5 h-5 text-[#567C8D]" />
-            </div>
-            <div className="font-display text-2xl text-foreground">
-              <AnimatedNumber value={k.value} />
-            </div>
-            <div className="text-xs font-mono text-muted-foreground mt-1">{k.label}</div>
+    <div className="space-y-6 max-w-7xl mx-auto pb-24 text-foreground font-body">
+      
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-mono font-medium uppercase mb-2">
+            <span>ADMINISTRATIVE GOVERNANCE</span>
           </div>
-        ))}
-      </div>
-
-      <div className="rounded-[24px] ern-card-glow border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] bg-card p-5 space-y-4">
-        <div className="flex flex-col sm:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search by name or contact..."
-              className="w-full pl-9 pr-3 py-2 rounded-full border border-[#2F4156]/20 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-[#567C8D]"
-            />
-          </div>
-          <div className="flex gap-2 flex-wrap">
-            {(["All", "Pending", "Under Review", "Verified", "Rejected"] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors whitespace-nowrap ${
-                  statusFilter === s
-                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
-                    : "bg-card text-foreground border border-border hover:bg-secondary hover:text-foreground font-medium"
-                }`}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
+          <h1 className="font-display text-4xl sm:text-5xl font-[350] text-foreground leading-[1.08] tracking-[-0.025em]">
+            User & Entity Verification
+          </h1>
+          <p className="text-sm text-muted-foreground font-body mt-2">
+            Review incoming store retailers, individual rescuers, and bulk NGO procurement credentials.
+          </p>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-left text-xs font-mono text-muted-foreground border-b border-[#2F4156]/10">
-                <th className="py-2 pr-3">Type</th>
-                <th className="py-2 pr-3">Name</th>
-                <th className="py-2 pr-3">Contact</th>
-                <th className="py-2 pr-3">Submitted</th>
-                <th className="py-2 pr-3">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((e) => {
-                const Icon = TYPE_ICON[e.type];
-                return (
-                  <tr
-                    key={e.id}
-                    onClick={() => {
-                      setSelected(e);
-                      setNoteDraft(e.notes || "");
-                    }}
-                    className="cursor-pointer border-b border-[#2F4156]/5 hover:bg-[#C8D9E6]/20 transition-colors"
-                  >
-                    <td className="py-3 pr-3">
-                      <div className="flex items-center gap-2 text-[#567C8D]">
-                        <Icon className="w-4 h-4" />
-                        <span className="text-xs">{e.type}</span>
-                      </div>
+        <button
+          type="button"
+          onClick={fetchPending}
+          className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-secondary hover:bg-secondary/80 text-foreground font-mono text-xs font-bold uppercase transition-all cursor-pointer min-h-[44px]"
+        >
+          <RefreshCw className="size-3.5" />
+          <span>Refresh Queue</span>
+        </button>
+      </div>
+
+      
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-1">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-mono uppercase font-bold">Pending Approval</span>
+            <Clock className="size-4" />
+          </div>
+          <div className="font-display text-3xl font-bold text-foreground">
+            <AnimatedNumber value={pendingUsers.length} />
+          </div>
+          <div className="text-[11px] font-mono text-muted-foreground">Awaiting review</div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-1">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-mono uppercase font-bold">Store Retailers</span>
+            <Store className="size-4" />
+          </div>
+          <div className="font-display text-3xl font-bold text-foreground">
+            <AnimatedNumber value={pendingUsers.filter((u) => u.role === "donor" || u.role === "retailer").length} />
+          </div>
+          <div className="text-[11px] font-mono text-muted-foreground">Commercial donors</div>
+        </div>
+
+        <div className="rounded-2xl border border-border bg-card p-5 space-y-1 col-span-2 md:col-span-1">
+          <div className="flex items-center justify-between text-muted-foreground">
+            <span className="text-xs font-mono uppercase font-bold">Buyers & NGOs</span>
+            <Building2 className="size-4" />
+          </div>
+          <div className="font-display text-3xl font-bold text-foreground">
+            <AnimatedNumber value={pendingUsers.filter((u) => u.role === "buyer" || u.role === "customer").length} />
+          </div>
+          <div className="text-[11px] font-mono text-muted-foreground">Rescue organizations</div>
+        </div>
+      </div>
+
+      
+      <div className="p-4 rounded-2xl bg-card border border-border flex items-center justify-between gap-4 font-mono text-xs">
+        <div className="relative flex-1 max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground" />
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search by name, email, or entity..."
+            className="w-full pl-9 pr-4 py-2.5 rounded-full border border-border bg-background text-foreground text-xs outline-none focus:border-primary"
+          />
+        </div>
+        <span className="text-muted-foreground hidden sm:inline">
+          Queue: {filtered.length} account{filtered.length === 1 ? "" : "s"}
+        </span>
+      </div>
+
+      
+      {isLoading ? (
+        <SkeletonLoader type="text" count={4} />
+      ) : error ? (
+        <div className="p-12 text-center rounded-2xl bg-card border border-border space-y-4">
+          <AlertTriangle className="size-8 text-destructive mx-auto" />
+          <p className="text-sm font-sans text-foreground">{error}</p>
+          <button
+            type="button"
+            onClick={fetchPending}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-mono uppercase font-bold cursor-pointer"
+          >
+            <RefreshCw className="size-3.5" />
+            <span>Retry</span>
+          </button>
+        </div>
+      ) : filtered.length === 0 ? (
+        <div className="p-12 text-center rounded-2xl bg-card border border-border space-y-3 font-mono text-xs">
+          <CheckCircle2 className="size-10 text-foreground mx-auto" />
+          <h3 className="font-display font-medium text-lg text-foreground">Queue Clear</h3>
+          <p className="text-muted-foreground font-sans max-w-sm mx-auto">
+            All user registrations and institutional procurement applicants have been reviewed and verified.
+          </p>
+        </div>
+      ) : (
+        <>
+          
+          <div className="hidden md:block rounded-2xl bg-card border border-border overflow-hidden font-mono text-xs">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-border bg-secondary/30 text-muted-foreground uppercase text-[11px]">
+                  <th className="py-3.5 px-4 font-bold">Applicant / Entity</th>
+                  <th className="py-3.5 px-4 font-bold">Email</th>
+                  <th className="py-3.5 px-4 font-bold">Requested Role</th>
+                  <th className="py-3.5 px-4 font-bold">Registration Date</th>
+                  <th className="py-3.5 px-4 font-bold text-right">Moderation Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {filtered.map((user) => (
+                  <tr key={user.id} className="hover:bg-secondary/20 transition-colors">
+                    <td className="py-3.5 px-4">
+                      <div className="font-sans font-bold text-foreground text-sm">{user.name}</div>
+                      <span className="text-[10px] text-muted-foreground font-mono">ID #{user.id}</span>
                     </td>
-                    <td className="py-3 pr-3 text-foreground font-medium">{e.name}</td>
-                    <td className="py-3 pr-3 text-muted-foreground">{e.contact}</td>
-                    <td className="py-3 pr-3 text-muted-foreground font-mono text-xs">
-                      {e.submittedDate}
-                    </td>
-                    <td className="py-3 pr-3 whitespace-nowrap">
-                      <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-mono whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLES[e.status]}`}
-                      >
-                        {e.status}
+                    <td className="py-3.5 px-4 text-foreground">{user.email}</td>
+                    <td className="py-3.5 px-4">
+                      <span className="px-2.5 py-0.5 rounded-full bg-secondary text-foreground text-[10px] font-bold uppercase">
+                        {user.role} {user.buyer_type ? `(${user.buyer_type})` : ""}
                       </span>
                     </td>
+                    <td className="py-3.5 px-4 text-muted-foreground">
+                      {new Date(user.created_at).toLocaleDateString("en-IN", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      })}
+                    </td>
+                    <td className="py-3.5 px-4 text-right space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => handleReject(user)}
+                        disabled={processingId === user.id}
+                        className="px-3.5 py-1.5 rounded-full border border-border text-destructive hover:bg-destructive/10 text-xs font-mono font-bold uppercase transition-colors cursor-pointer min-h-[44px]"
+                      >
+                        Reject
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleVerify(user)}
+                        disabled={processingId === user.id}
+                        className="px-4 py-1.5 rounded-full bg-primary text-primary-foreground hover:opacity-90 text-xs font-mono font-bold uppercase transition-colors cursor-pointer min-h-[44px]"
+                      >
+                        Verify & Activate
+                      </button>
+                    </td>
                   </tr>
-                );
-              })}
-              {filtered.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="py-8 text-center text-muted-foreground">
-                    No matching records.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {selected && (
-        <div className="fixed inset-0 z-50 flex justify-end">
-          <div
-            className="absolute inset-0 bg-black/30"
-            onClick={() => setSelected(null)}
-          />
-          <div className="relative w-full max-w-md h-full bg-card border-l border-[#2F4156] p-6 overflow-y-auto space-y-5">
-            <div className="flex items-center justify-between">
-              <h2 className="font-display text-xl text-foreground">{selected.name}</h2>
-              <button onClick={() => setSelected(null)}>
-                <X className="w-5 h-5 text-muted-foreground" />
-              </button>
-            </div>
-
-            <div className="space-y-1">
-              <span
-                className={`inline-block px-2.5 py-1 rounded-full text-xs font-mono ${STATUS_STYLES[selected.status]}`}
-              >
-                {selected.status}
-              </span>
-              <p className="text-sm text-muted-foreground">{selected.type} · {selected.contact}</p>
-              <p className="text-xs font-mono text-muted-foreground">Submitted {selected.submittedDate}</p>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-mono text-muted-foreground mb-2">DOCUMENTS</h3>
-              <ul className="space-y-1.5">
-                {selected.documents.map((doc) => (
-                  <li
-                    key={doc}
-                    className="flex items-center gap-2 text-sm text-foreground bg-[#C8D9E6]/20 rounded-lg px-3 py-2"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-[#567C8D]" />
-                    {doc}
-                  </li>
                 ))}
-              </ul>
-            </div>
-
-            <div>
-              <h3 className="text-xs font-mono text-muted-foreground mb-2">NOTES</h3>
-              <textarea
-                value={noteDraft}
-                onChange={(e) => setNoteDraft(e.target.value)}
-                placeholder="Add a note for this decision..."
-                className="w-full rounded-xl border border-[#2F4156]/20 bg-background p-3 text-sm text-foreground min-h-[80px] focus:outline-none focus:ring-2 focus:ring-[#567C8D]"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2 pt-2">
-              <button
-                onClick={() => updateStatus(selected.id, "Verified")}
-                className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-97 transition-colors shadow-none"
-              >
-                Approve
-              </button>
-              <button
-                onClick={() => updateStatus(selected.id, "Rejected")}
-                className="w-full py-2.5 rounded-full border border-destructive text-destructive text-sm font-medium hover:bg-destructive/10 active:scale-97 transition-colors"
-              >
-                Reject
-              </button>
-              <button
-                onClick={() => updateStatus(selected.id, "Under Review")}
-                className="w-full py-2.5 rounded-full border border-border text-foreground text-sm font-medium hover:bg-secondary active:scale-97 transition-colors"
-              >
-                Request More Info
-              </button>
-            </div>
+              </tbody>
+            </table>
           </div>
-        </div>
+
+          
+          <div className="md:hidden space-y-3 font-mono text-xs">
+            {filtered.map((user) => (
+              <div key={user.id} className="p-4 rounded-2xl bg-card border border-border space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h4 className="font-sans font-bold text-foreground text-sm">{user.name}</h4>
+                    <span className="text-[10px] text-muted-foreground">{user.email}</span>
+                  </div>
+                  <span className="px-2.5 py-0.5 rounded-full bg-secondary text-foreground text-[10px] font-bold uppercase shrink-0">
+                    {user.role}
+                  </span>
+                </div>
+
+                <div className="p-3 rounded-xl bg-secondary/30 text-xs flex justify-between">
+                  <span className="text-muted-foreground">Registered:</span>
+                  <span className="text-foreground">
+                    {new Date(user.created_at).toLocaleDateString("en-IN", {
+                      day: "2-digit",
+                      month: "short",
+                    })}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-end gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleReject(user)}
+                    disabled={processingId === user.id}
+                    className="flex-1 py-2 rounded-full border border-border text-destructive hover:bg-destructive/10 text-xs font-bold uppercase min-h-[44px]"
+                  >
+                    Reject
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleVerify(user)}
+                    disabled={processingId === user.id}
+                    className="flex-1 py-2 rounded-full bg-primary text-primary-foreground text-xs font-bold uppercase min-h-[44px]"
+                  >
+                    Verify
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { api, type DashboardStats } from "@/lib/api";
 import {
   Users,
   Package,
@@ -65,7 +66,7 @@ const ACTIVITIES: ActivityItem[] = [
     title: "Bulk Inventory Import completed",
     description: "348 products imported to Store A",
     time: "15 min ago",
-    link: "/admin/inventory",
+    link: "/retailer/inventory",
     icon: CloudUpload,
     iconBg: "bg-[#2F4156]",
     iconColor: "text-primary-foreground",
@@ -98,7 +99,7 @@ const ACTIVITIES: ActivityItem[] = [
     title: "Expiry Alert: 12 items flagged",
     description: "Batches reaching critical threshold in Bay 4",
     time: "3 hours ago",
-    link: "/admin/expiry",
+    link: "/retailer/expiry-intelligence",
     icon: Clock,
     iconBg: "bg-destructive",
     iconColor: "text-primary-foreground",
@@ -117,11 +118,11 @@ const ACTIVITIES: ActivityItem[] = [
 ];
 
 const KPI_ROUTES = {
-  totalProducts: "/admin/inventory",
+  totalProducts: "/retailer/inventory",
   activeUsers: "/admin/users",
   locations: "/admin/locations",
-  expiryTracked: "/admin/expiry",
-  needsAttention: "/admin/inventory?filter=critical",
+  expiryTracked: "/retailer/expiry-intelligence",
+  needsAttention: "/retailer/inventory",
 };
 
 export default function AdminDashboard() {
@@ -144,6 +145,11 @@ export default function AdminDashboard() {
   const [reportModalOpen, setReportModalOpen] = useState(false);
 
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [liveStats, setLiveStats] = useState<DashboardStats | null>(null);
+
+  useEffect(() => {
+    api.admin.dashboardStats().then(setLiveStats).catch(() => {});
+  }, []);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -156,7 +162,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6 text-foreground font-body">
-      {/* Toast Alert */}
+      
       {toastMessage && (
         <div className="fixed top-20 right-6 z-50 p-4 rounded-full bg-card border border-border shadow-none text-foreground font-mono text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-top-3 duration-300">
           <span className="size-2 rounded-full bg-[#2F4156]" />
@@ -171,7 +177,7 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Top Banner / Breadcrumb & Controls */}
+      
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-secondary text-foreground text-xs font-mono font-bold uppercase mb-2">
@@ -185,9 +191,9 @@ export default function AdminDashboard() {
           </p>
         </div>
 
-        {/* Global Action Buttons */}
+        
         <div className="flex items-center gap-2.5 flex-wrap">
-          {/* Warehouse Selector */}
+          
           <div className="relative">
             <button
               type="button"
@@ -223,7 +229,7 @@ export default function AdminDashboard() {
             )}
           </div>
 
-          {/* Quick Import Button */}
+          
           <button
             type="button"
             onClick={() => setImportModalOpen(true)}
@@ -233,7 +239,7 @@ export default function AdminDashboard() {
             <span>Import CSV</span>
           </button>
 
-          {/* Generate Report Button */}
+          
           <button
             type="button"
             onClick={() => setReportModalOpen(true)}
@@ -245,7 +251,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Organization Meta Strip */}
+      
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 p-5 rounded-2xl bg-card border border-border shadow-none ern-card-glow">
         <div>
           <p className="text-[10px] font-mono uppercase font-bold text-muted-foreground">
@@ -297,7 +303,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Operations Pulse Bar */}
+      
       <div className="p-4 rounded-2xl bg-card border border-border flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-none ern-card-glow">
         <div className="flex items-center gap-2 font-mono text-xs font-bold text-foreground shrink-0">
           <Activity className="size-4 text-foreground dark:text-accent animate-pulse" />
@@ -306,7 +312,7 @@ export default function AdminDashboard() {
 
         <div className="flex items-center gap-2.5 flex-wrap text-xs font-mono">
           <button
-            onClick={() => navigate("/admin/inventory?filter=critical")}
+            onClick={() => navigate("/retailer/inventory")}
             className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover shadow-none"
           >
             <span className="size-2 rounded-full bg-accent animate-pulse" />
@@ -314,7 +320,7 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => navigate("/admin/expiry")}
+            onClick={() => navigate("/retailer/expiry-intelligence")}
             className="px-3.5 py-1.5 rounded-full bg-destructive text-destructive-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover--critical shadow-none"
           >
             <span className="size-2 rounded-full bg-card" />
@@ -322,7 +328,7 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => navigate("/admin/inventory?filter=low-stock")}
+            onClick={() => navigate("/retailer/inventory")}
             className="px-3.5 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 dark:hover:bg-[#b8ccdc] text-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover shadow-none"
           >
             <span>9 low-stock items</span>
@@ -330,9 +336,9 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* KPI Cards Grid */}
+      
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
-        {/* 1. Total Products */}
+        
         <div
           onClick={() => navigate(KPI_ROUTES.totalProducts)}
           role="button"
@@ -352,13 +358,13 @@ export default function AdminDashboard() {
               Total Products
             </p>
             <p className="text-3xl sm:text-4xl font-bold font-display text-foreground uppercase mt-1">
-              <AnimatedNumber value={1248} duration={800} />
+              <AnimatedNumber value={liveStats ? liveStats.total_listings : 1248} duration={800} />
             </p>
             <p className="text-[11px] text-muted-foreground font-body mt-1">Across all facilities</p>
           </div>
         </div>
 
-        {/* 2. Active Users */}
+        
         <div
           onClick={() => navigate(KPI_ROUTES.activeUsers)}
           role="button"
@@ -378,13 +384,13 @@ export default function AdminDashboard() {
               Active Users
             </p>
             <p className="text-3xl sm:text-4xl font-bold font-display text-foreground uppercase mt-1">
-              <AnimatedNumber value={18} duration={800} />
+              <AnimatedNumber value={liveStats ? liveStats.total_users : 18} duration={800} />
             </p>
             <p className="text-[11px] text-muted-foreground font-body mt-1">Staff team seats</p>
           </div>
         </div>
 
-        {/* 3. Locations */}
+        
         <div
           onClick={() => navigate(KPI_ROUTES.locations)}
           role="button"
@@ -408,7 +414,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* 4. Expiry Tracked */}
+        
         <div
           onClick={() => navigate(KPI_ROUTES.expiryTracked)}
           role="button"
@@ -425,16 +431,16 @@ export default function AdminDashboard() {
           </div>
           <div className="mt-4">
             <p className="text-xs font-mono uppercase font-bold text-muted-foreground">
-              Expiry Tracked
+              Active Listings
             </p>
             <p className="text-3xl sm:text-4xl font-bold font-display text-foreground uppercase mt-1">
-              <AnimatedNumber value={326} duration={800} />
+              <AnimatedNumber value={liveStats ? liveStats.active_listings : 326} duration={800} />
             </p>
             <p className="text-[11px] text-muted-foreground font-body mt-1">Live batch telemetry</p>
           </div>
         </div>
 
-        {/* 5. Needs Attention */}
+        
         <div
           onClick={() => navigate(KPI_ROUTES.needsAttention)}
           role="button"
@@ -451,19 +457,19 @@ export default function AdminDashboard() {
           </div>
           <div className="mt-4">
             <p className="text-xs font-mono uppercase text-foreground dark:text-accent font-bold">
-              Needs Attention
+              Pending Approvals
             </p>
             <p className="text-3xl sm:text-4xl font-bold font-display text-foreground uppercase mt-1">
-              <AnimatedNumber value={21} duration={800} />
+              <AnimatedNumber value={liveStats ? liveStats.pending_users : 21} duration={800} />
             </p>
             <p className="text-[11px] text-muted-foreground font-body mt-1">Immediate action</p>
           </div>
         </div>
       </div>
 
-      {/* Main 3-Column Area */}
+      
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-5 items-stretch">
-        {/* Column 1: PENDING ACTIONS */}
+        
         <div className="rounded-2xl sm:rounded-[32px] bg-card border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] dark:hover:border-[#2F4156] p-6 flex flex-col justify-between shadow-none ern-card-glow transition-colors duration-200">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -477,7 +483,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-3 mt-4">
-              {/* Item 1 */}
+              
               <div
                 onClick={() => navigate("/admin/users")}
                 className="w-full flex items-center justify-between gap-3 text-left p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] border border-transparent cursor-pointer ern-row-hover"
@@ -500,7 +506,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              {/* Item 2 */}
+              
               <div
                 onClick={() => setImportModalOpen(true)}
                 className="w-full flex items-center justify-between gap-3 text-left p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] border border-transparent cursor-pointer ern-row-hover"
@@ -523,7 +529,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              {/* Item 3 */}
+              
               <div
                 onClick={() => navigate("/admin/requests")}
                 className="w-full flex items-center justify-between gap-3 text-left p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] border border-transparent cursor-pointer ern-row-hover"
@@ -549,7 +555,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Column 2: SYSTEM HEALTH & SERVICES */}
+        
         <div className="rounded-2xl sm:rounded-[32px] bg-card border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] dark:hover:border-[#2F4156] p-6 flex flex-col justify-between shadow-none ern-card-glow transition-colors duration-200">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -563,7 +569,7 @@ export default function AdminDashboard() {
             </div>
 
             <div className="space-y-3 mt-4">
-              {/* Service 1 */}
+              
               <div
                 onClick={() => setHealthModalOpen(true)}
                 className="flex items-center justify-between gap-2 p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] cursor-pointer ern-row-hover"
@@ -582,7 +588,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              {/* Service 2 */}
+              
               <div
                 onClick={() => navigate("/admin/policies")}
                 className="flex items-center justify-between gap-2 p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] cursor-pointer ern-row-hover"
@@ -601,7 +607,7 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              {/* Service 3 */}
+              
               <div
                 onClick={() => setImportModalOpen(true)}
                 className="flex items-center justify-between gap-2 p-3.5 rounded-xl bg-secondary/50 hover:bg-secondary/50 dark:hover:bg-[#567C8D] cursor-pointer ern-row-hover"
@@ -623,7 +629,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Column 3: INVENTORY AT A GLANCE */}
+        
         <div className="rounded-2xl sm:rounded-[32px] bg-card border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] dark:hover:border-[#2F4156] p-6 flex flex-col justify-between shadow-none ern-card-glow transition-colors duration-200">
           <div>
             <div className="flex items-center justify-between pb-3 border-b border-border">
@@ -719,9 +725,9 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Lower Area: Recent Activity & Quick Actions */}
+      
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-stretch">
-        {/* Recent Activity */}
+        
         <div className="rounded-2xl sm:rounded-[32px] bg-card border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] dark:hover:border-[#2F4156] p-6 flex flex-col justify-between shadow-none ern-card-glow transition-colors duration-200">
           <div>
             <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -766,7 +772,7 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Quick Actions */}
+        
         <div className="rounded-2xl sm:rounded-[32px] bg-card border border-[#2F4156] dark:border-[rgba(47,65,86,0.15)] dark:hover:border-[#2F4156] p-6 flex flex-col justify-between shadow-none ern-card-glow transition-colors duration-200">
           <div>
             <div className="pb-4 border-b border-border">
@@ -803,7 +809,7 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
-                onClick={() => navigate("/admin/inventory")}
+                onClick={() => navigate("/retailer/inventory")}
                 className="p-4 rounded-xl bg-secondary/60 hover:bg-secondary/60 dark:hover:bg-[#567C8D] flex flex-col items-center justify-center text-center cursor-pointer shadow-none ern-btn-hover"
               >
                 <Sliders className="size-5 text-foreground dark:text-accent" />
@@ -832,7 +838,7 @@ export default function AdminDashboard() {
         </div>
       </div>
 
-      {/* Policy Modal */}
+      
       {policyModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-card border border-border rounded-2xl sm:rounded-[32px] p-7 shadow-none space-y-4 text-foreground ern-card-glow">
@@ -892,12 +898,12 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* External Modals */}
+      
       <InventoryHealthModal
         isOpen={healthModalOpen}
         onClose={() => setHealthModalOpen(false)}
         onFilterSelect={(filter) => {
-          navigate(`/admin/inventory?filter=${filter}`);
+          navigate(`/retailer/inventory?filter=${filter}`);
         }}
       />
 

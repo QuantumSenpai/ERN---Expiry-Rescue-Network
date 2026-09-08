@@ -1,4 +1,5 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { api } from "@/lib/api";
 import {
   Users as UsersIcon,
   UserCheck,
@@ -252,6 +253,34 @@ export default function Users() {
   const { user: currentUser } = useAuth();
 
   const [usersList, setUsersList] = useState<OrgUser[]>(INITIAL_USERS);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.admin
+      .allUsers()
+      .then((data) => {
+        if (!isMounted || !Array.isArray(data) || data.length === 0) return;
+        const liveMapped: OrgUser[] = data.map((u) => ({
+          id: `usr-${u.id}`,
+          name: u.name,
+          email: u.email,
+          role: u.role === "admin" ? "Admin" : u.role === "donor" ? "Staff" : "User",
+          location: "All Locations",
+          status: u.verified ? "Active" : "Pending",
+          lastActive: "Active Session",
+          joinedDate: new Date(u.created_at).toLocaleDateString("en-GB", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+          }),
+        }));
+        setUsersList(liveMapped);
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [roleFilter, setRoleFilter] = useState<string>("All");
@@ -621,7 +650,7 @@ export default function Users() {
 
   return (
     <div className="space-y-6 max-w-[1400px] pb-24 text-foreground font-body">
-      {/* Toast */}
+      
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-card border border-border shadow-none text-foreground font-mono text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2">
           <CheckCircle2 className="size-4 text-foreground shrink-0" />
@@ -629,7 +658,7 @@ export default function Users() {
         </div>
       )}
 
-      {/* Header */}
+      
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-mono font-medium uppercase mb-2">
@@ -681,7 +710,7 @@ export default function Users() {
         </div>
       </div>
 
-      {/* 4 Metric Cards */}
+      
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 font-mono">
         <div
           onClick={() => {
@@ -785,7 +814,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       </div>
 
-      {/* Toolbar */}
+      
       <div className="p-5 rounded-[24px] bg-card border border-border shadow-none space-y-4 ern-card-glow">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
           <div className="relative flex-1 min-w-[260px]">
@@ -869,7 +898,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       </div>
 
-      {/* Bulk Action Bar */}
+      
       {selectedIds.length > 0 && (
         <div className="p-4 px-6 rounded-2xl bg-[#2F4156] border border-border shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-3 font-mono">
           <div className="flex items-center gap-2.5 text-xs font-bold text-primary-foreground uppercase">
@@ -909,7 +938,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       )}
 
-      {/* Main Table */}
+      
       <div className="bg-card border border-border rounded-[24px] sm:rounded-[32px] overflow-hidden shadow-none ern-card-glow">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
@@ -1147,7 +1176,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       </div>
 
-      {/* Modals */}
+      
       {isAddUserModalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-7 shadow-none space-y-5 text-foreground ern-card-glow">
@@ -1265,7 +1294,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       )}
 
-      {/* Edit User Modal */}
+      
       {isEditUserModalOpen && selectedUser && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs">
           <div className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-7 shadow-none space-y-5 text-foreground ern-card-glow">
@@ -1372,7 +1401,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       )}
 
-      {/* Confirmation Dialog */}
+      
       {confirmDialog.isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs">
           <div className="w-full max-w-md bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 shadow-none space-y-4 text-foreground font-mono ern-card-glow">
@@ -1404,7 +1433,7 @@ justify-between transition-all ern-card-glow ${
         </div>
       )}
 
-      {/* User Detail Modal */}
+      
       {isDetailDrawerOpen && selectedUser && (
         <div
           onClick={() => setIsDetailDrawerOpen(false)}
@@ -1416,7 +1445,7 @@ justify-between transition-all ern-card-glow ${
             onClick={(e) => e.stopPropagation()}
             className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-5 ern-card-glow max-h-[90vh] overflow-y-auto"
           >
-            {/* Header */}
+            
             <div className="flex items-start justify-between pb-3 border-b border-border">
               <div className="flex items-center gap-3.5">
                 <div className="size-11 rounded-full bg-secondary border border-border flex items-center justify-center font-bold text-foreground text-sm shrink-0 font-display">
@@ -1441,7 +1470,7 @@ justify-between transition-all ern-card-glow ${
               </button>
             </div>
 
-            {/* Core Info Grid */}
+            
             <div className="grid grid-cols-2 gap-3 text-xs">
               <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
                 <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Assigned Role</span>
@@ -1474,7 +1503,7 @@ justify-between transition-all ern-card-glow ${
               </div>
             </div>
 
-            {/* Contact & Registration Telemetry */}
+            
             <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-2 text-xs">
               <span className="font-bold uppercase text-foreground text-xs block">Contact & Access Meta</span>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -1489,7 +1518,7 @@ justify-between transition-all ern-card-glow ${
               </div>
             </div>
 
-            {/* Recent Operational Activity */}
+            
             {selectedUser.recentActivity && selectedUser.recentActivity.length > 0 && (
               <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-2 text-xs">
                 <span className="font-bold uppercase text-foreground text-xs block">Recent Activity Log</span>
@@ -1507,7 +1536,7 @@ justify-between transition-all ern-card-glow ${
               </div>
             )}
 
-            {/* Footer Actions */}
+            
             <div className="flex items-center justify-between pt-2 border-t border-border">
               <button
                 type="button"
