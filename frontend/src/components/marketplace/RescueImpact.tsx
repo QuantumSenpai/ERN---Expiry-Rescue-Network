@@ -1,29 +1,4 @@
-﻿import { motion } from "framer-motion";
-import { Leaf, Wallet, RefreshCcw } from "lucide-react";
-import AnimatedNumber from "@/components/AnimatedNumber";
-
-const impactContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.08,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const impactCardVariants = {
-  hidden: { opacity: 0, y: 16 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.45,
-      ease: [0, 0, 0.2, 1] as const,
-    },
-  },
-};
+import { Leaf, Wallet, ShoppingBag } from "lucide-react";
 
 export default function RescueImpact() {
   return (
@@ -32,83 +7,65 @@ export default function RescueImpact() {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-[10.5px] font-mono font-medium uppercase mb-1">
-              <span>METRICS</span>
+            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary/15 text-primary border border-primary/20 text-[10.5px] font-mono font-bold uppercase mb-1">
+              <span>COMMUNITY IMPACT</span>
             </div>
-            <h3 className="font-display font-[350] text-2xl text-foreground tracking-[-0.015em]">
-              Rescue impact
+            <h3 className="font-display font-bold text-2xl text-foreground tracking-[-0.015em]">
+              The impact of rescuing groceries
             </h3>
-            <p className="text-xs text-muted-foreground font-body mt-0.5">
-              Measurable waste reduction across our verified retail network.
+            <p className="text-xs text-muted-foreground font-sans mt-0.5">
+              Every rescue purchase diverts edible food from store waste while keeping household grocery budgets lower.
             </p>
           </div>
         </div>
 
-        {/* 3 Large Stat Cards */}
-        <motion.div
-          variants={impactContainerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-          className="grid sm:grid-cols-3 gap-4"
-        >
+        {/* 3 Clear Stat Cards */}
+        <div className="grid sm:grid-cols-3 gap-4 font-mono">
           {/* Stat 1 */}
-          <motion.div
-            variants={impactCardVariants}
-            whileHover={{ y: -3, scale: 1.01 }}
-            className="p-6 rounded-2xl sm:rounded-[32px] bg-background border border-border flex items-center gap-4 shadow-none hover:border-primary transition-all duration-200"
-          >
-            <div className="size-12 rounded-full bg-card flex items-center justify-center text-foreground shrink-0">
-              <Leaf className="size-6" />
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-card border border-border flex items-center gap-4 shadow-none">
+            <div className="size-12 rounded-full bg-secondary flex items-center justify-center text-primary shrink-0 border border-border">
+              <ShoppingBag className="size-6" />
             </div>
             <div>
-              <p className="text-3xl font-[350] font-display text-foreground leading-none">
-                <AnimatedNumber value={12480} />+
+              <p className="text-2xl sm:text-3xl font-bold font-display text-foreground leading-none">
+                3,400+
               </p>
-              <p className="text-xs text-muted-foreground font-mono mt-1 uppercase">
-                Meals / Units Rescued
+              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">
+                Packs Rescued This Month
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Stat 2 */}
-          <motion.div
-            variants={impactCardVariants}
-            whileHover={{ y: -3, scale: 1.01 }}
-            className="p-6 rounded-2xl sm:rounded-[32px] bg-background border border-border flex items-center gap-4 shadow-none hover:border-primary transition-all duration-200"
-          >
-            <div className="size-12 rounded-full bg-card flex items-center justify-center text-foreground shrink-0">
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-card border border-border flex items-center gap-4 shadow-none">
+            <div className="size-12 rounded-full bg-secondary flex items-center justify-center text-primary shrink-0 border border-border">
               <Wallet className="size-6" />
             </div>
             <div>
-              <p className="text-3xl font-[350] font-display text-foreground leading-none">
-                ₹<AnimatedNumber value={840000} />
+              <p className="text-2xl sm:text-3xl font-bold font-display text-foreground leading-none">
+                ₹85,000+
               </p>
-              <p className="text-xs text-muted-foreground font-mono mt-1 uppercase">
-                Consumer Savings Realized
+              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">
+                Customer Savings Given
               </p>
             </div>
-          </motion.div>
+          </div>
 
           {/* Stat 3 */}
-          <motion.div
-            variants={impactCardVariants}
-            whileHover={{ y: -3, scale: 1.01 }}
-            className="p-6 rounded-2xl sm:rounded-[32px] bg-background border border-border flex items-center gap-4 shadow-none hover:border-primary transition-all duration-200"
-          >
-            <div className="size-12 rounded-full bg-card flex items-center justify-center text-foreground shrink-0">
-              <RefreshCcw className="size-6" />
+          <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-card border border-border flex items-center gap-4 shadow-none">
+            <div className="size-12 rounded-full bg-secondary flex items-center justify-center text-primary shrink-0 border border-border">
+              <Leaf className="size-6" />
             </div>
             <div>
-              <p className="text-3xl font-[350] font-display text-foreground leading-none">
-                <AnimatedNumber value={94.8} decimals={1} />%
+              <p className="text-2xl sm:text-3xl font-bold font-display text-foreground leading-none">
+                1.4 Tons
               </p>
-              <p className="text-xs text-muted-foreground font-mono mt-1 uppercase">
-                Inventory Liquidation Rate
+              <p className="text-xs text-muted-foreground mt-1 uppercase font-semibold">
+                Food Waste Diverted
               </p>
             </div>
-          </motion.div>
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );
