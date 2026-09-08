@@ -1,35 +1,13 @@
-﻿import { useState } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import { Plus, Check, ChevronRight } from "lucide-react";
+import { useState } from "react";
+import { Plus, Check } from "lucide-react";
 import type { MarketplaceProduct, ProductOffer } from "@/data/marketplaceData";
+import { calculatePricing } from "@/lib/pricingService";
+import { calculateExpiryStatus } from "@/lib/expiryService";
 
 interface BuyAgainProps {
   products: MarketplaceProduct[];
   onAddToCart: (product: MarketplaceProduct, offer?: ProductOffer) => void;
 }
-
-const buyAgainContainerVariants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      staggerChildren: 0.06,
-      delayChildren: 0.05,
-    },
-  },
-};
-
-const buyAgainItemVariants = {
-  hidden: { opacity: 0, y: 12 },
-  visible: {
-    opacity: 1,
-    y: 0,
-    transition: {
-      duration: 0.4,
-      ease: [0, 0, 0.2, 1] as const,
-    },
-  },
-};
 
 export default function BuyAgain({ products, onAddToCart }: BuyAgainProps) {
   const [recentlyAddedId, setRecentlyAddedId] = useState<string | null>(null);
@@ -37,42 +15,38 @@ export default function BuyAgain({ products, onAddToCart }: BuyAgainProps) {
   const handleAdd = (product: MarketplaceProduct) => {
     onAddToCart(product);
     setRecentlyAddedId(product.id);
-    setTimeout(() => setRecentlyAddedId(null), 1500);
+    setTimeout(() => setRecentlyAddedId(null), 1400);
   };
 
   return (
     <div className="space-y-3 flex flex-col justify-between h-full text-foreground font-body">
       <div>
-        <h4 className="font-display font-[350] text-xs sm:text-sm text-foreground uppercase tracking-tight">
-          BUY AGAIN
+        <h4 className="font-display font-bold text-xs sm:text-sm text-foreground uppercase tracking-tight">
+          POPULAR ESSENTIALS
         </h4>
-        <p className="text-[11px] text-muted-foreground font-body mt-0.5">
-          Your frequently ordered items
+        <p className="text-[11px] text-muted-foreground font-sans mt-0.5">
+          Daily staple items frequently bought
         </p>
       </div>
 
-      {/* 3 items in a vertical list */}
-      <motion.div
-        variants={buyAgainContainerVariants}
-        initial="hidden"
-        whileInView="visible"
-        viewport={{ once: true, amount: 0.15 }}
-        className="space-y-2 flex-1"
-      >
+      {/* 3 items in vertical list */}
+      <div className="space-y-2 flex-1">
         {products.map((product) => {
           const isAdded = recentlyAddedId === product.id;
           const bestOffer = product.defaultOffer;
+          const pricing = calculatePricing(bestOffer.mrp || product.mrp, {
+            sellingPrice: bestOffer.price,
+          });
+          const expiryInfo = calculateExpiryStatus(bestOffer.expiryDate);
 
           return (
-            <motion.div
+            <div
               key={product.id}
-              variants={buyAgainItemVariants}
-              whileHover={{ y: -1 }}
-              className="p-3 rounded-2xl bg-card flex items-center justify-between gap-3 transition-colors shadow-none"
+              className="p-3 rounded-2xl bg-card border border-border flex items-center justify-between gap-3 shadow-none hover:border-primary/50 transition-colors"
             >
               {/* Product Thumbnail & Details */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className="size-11 rounded-xl overflow-hidden bg-background shrink-0 p-0.5">
+                <div className="size-11 rounded-xl overflow-hidden bg-white shrink-0 p-0.5 border border-border">
                   <img
                     src={product.imageUrl}
                     alt={product.name}
@@ -81,13 +55,15 @@ export default function BuyAgain({ products, onAddToCart }: BuyAgainProps) {
                 </div>
 
                 <div className="min-w-0 font-mono">
-                  <h5 className="text-xs font-medium text-foreground truncate">
+                  <h5 className="text-xs font-bold text-foreground truncate font-sans">
                     {product.name}
                   </h5>
-                  <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-0.5">
+                  <div className="flex items-center gap-1.5 text-[10.5px] text-muted-foreground mt-0.5">
                     <span>{product.unit}</span>
-                    <span>&bull;</span>
-                    <span className="font-medium text-foreground">₹{bestOffer.price}</span>
+                    <span>•</span>
+                    <span className="font-bold text-foreground">{pricing.formattedSellingPrice}</span>
+                    <span>•</span>
+                    <span className="text-amber-600 dark:text-amber-400 font-semibold">{expiryInfo.expiryText}</span>
                   </div>
                 </div>
               </div>
@@ -96,12 +72,14 @@ export default function BuyAgain({ products, onAddToCart }: BuyAgainProps) {
               <button
                 type="button"
                 onClick={() => handleAdd(product)}
+                disabled={isAdded}
                 className={`p-2 rounded-full transition-all duration-150 cursor-pointer shadow-none active:scale-95 shrink-0 ${
                   isAdded
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-primary text-primary-foreground hover:bg-[#567C8D]"
+                    ? "bg-accent text-accent-foreground"
+                    : "bg-primary text-primary-foreground hover:bg-primary/90"
                 }`}
                 title="Add to Cart"
+                aria-label="Add to Cart"
               >
                 {isAdded ? (
                   <Check className="size-3.5" />
@@ -109,10 +87,10 @@ export default function BuyAgain({ products, onAddToCart }: BuyAgainProps) {
                   <Plus className="size-3.5" />
                 )}
               </button>
-            </motion.div>
+            </div>
           );
         })}
-      </motion.div>
+      </div>
     </div>
   );
 }
