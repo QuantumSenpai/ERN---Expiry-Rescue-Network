@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   X,
   Clock,
@@ -581,8 +581,8 @@ export default function ProductDetailModal({
                       EXPIRY STATUS & CLEARANCE
                     </span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-snow-white font-mono font-bold text-xs">
-                    CRITICAL — 2 DAYS LEFT
+                  <span className="px-2.5 py-0.5 rounded-full bg-rose-500 text-white font-mono font-bold text-xs whitespace-nowrap inline-flex items-center">
+                    CRITICAL — 2D LEFT
                   </span>
                 </div>
 
@@ -767,8 +767,8 @@ export default function ProductDetailModal({
                       <td className="py-3.5 px-4 font-bold">{loc.quantity} units</td>
                       <td className="py-3.5 px-4 font-bold">₹{loc.stockValue.toLocaleString()}</td>
                       <td className="py-3.5 px-4 text-muted-foreground">{loc.reorderLevel} units</td>
-                      <td className="py-3.5 px-4">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${getStockStatusBadge(loc.status)}`}>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-bold border whitespace-nowrap inline-flex items-center justify-center ${getStockStatusBadge(loc.status)}`}>
                           {loc.status}
                         </span>
                       </td>
