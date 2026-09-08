@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Building2,
   Store,
@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Download,
   X,
   Phone,
@@ -612,16 +614,16 @@ export default function Locations() {
 
           <div className="flex items-center gap-2 flex-wrap text-xs">
             <button
-              onClick={() => navigate("/retailer/inventory?filter=attention")}
+              onClick={() => navigate("/admin/inventory")}
               className="px-3 py-1 rounded-full bg-primary text-primary-foreground font-bold flex items-center gap-1.5 cursor-pointer shadow-none"
             >
-              <span className="size-1.5 rounded-full bg-[#2F4156]" />
+              <span className="size-1.5 rounded-full bg-primary-foreground" />
               <span>21 attention items</span>
             </button>
 
             <button
-              onClick={() => navigate("/retailer/expiry-intelligence")}
-              className="px-3 py-1 rounded-full bg-[#2F4156] border border-[#2F4156] text-foreground font-bold flex items-center gap-1.5 cursor-pointer shadow-none"
+              onClick={() => navigate("/admin/inventory")}
+              className="px-3 py-1 rounded-full bg-secondary border border-border text-foreground font-bold flex items-center gap-1.5 cursor-pointer shadow-none"
             >
               <span>6 expiry risk lots</span>
             </button>
@@ -716,47 +718,110 @@ export default function Locations() {
               <tr>
                 <th
                   onClick={() => handleSort("name")}
-                  className="py-4 px-5 cursor-pointer hover:text-foreground font-bold uppercase min-w-[300px]"
+                  className="py-4 px-5 cursor-pointer hover:text-foreground font-bold uppercase min-w-[300px] group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Location & Code</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "name" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("type")}
-                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
-                  <span>Type</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Type</span>
+                    {sortField === "type" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
+                  </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("manager")}
-                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
-                  <span>Manager</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Manager</span>
+                    {sortField === "manager" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
+                  </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("totalProducts")}
-                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
-                  <span>Inventory</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Inventory</span>
+                    {sortField === "totalProducts" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
+                  </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("expiryRiskCount")}
-                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
-                  <span>Risk Units</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Risk Units</span>
+                    {sortField === "expiryRiskCount" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
+                  </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("status")}
-                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
-                  <span>Status</span>
+                  <div className="flex items-center gap-1.5">
+                    <span>Status</span>
+                    {sortField === "status" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
+                  </div>
                 </th>
 
                 <th className="py-4 px-5 text-right font-bold uppercase">Actions</th>
@@ -818,7 +883,7 @@ export default function Locations() {
                           loc.expiryRiskCount > 10
                             ? "bg-primary text-primary-foreground"
                             : loc.expiryRiskCount > 0
-                            ? "bg-[#2F4156] border border-[#2F4156] text-foreground"
+                            ? "bg-primary text-primary-foreground"
                             : "bg-primary text-primary-foreground"
                         }`}
                       >
@@ -844,6 +909,8 @@ export default function Locations() {
                     >
                       <button
                         onClick={() => handleOpenDetail(loc)}
+                        title={`View details for ${loc.name}`}
+                        aria-label={`View details for ${loc.name}`}
                         className="px-3.5 py-1.5 rounded-lg bg-primary text-primary-foreground text-xs uppercase font-bold hover:bg-[#567C8D] transition-all cursor-pointer shadow-none"
                       >
                         View
@@ -1005,6 +1072,171 @@ export default function Locations() {
           showToast(`Transfer order initiated: ${data.product} (${data.qty} units)`);
         }}
       />
+
+      {/* Location Detail Modal */}
+      {isDetailDrawerOpen && selectedLocation && (
+        <div
+          onClick={() => setIsDetailDrawerOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in"
+          role="dialog"
+          aria-label={`Location details for ${selectedLocation.name}`}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-xl bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-5 ern-card-glow max-h-[90vh] overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-3">
+                <div className="size-10 rounded-full bg-secondary border border-border flex items-center justify-center font-bold text-foreground shrink-0">
+                  {selectedLocation.type === "Warehouse" ? (
+                    <Warehouse className="size-5" />
+                  ) : (
+                    <Store className="size-5" />
+                  )}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display font-bold text-xl uppercase text-foreground">
+                      {selectedLocation.name}
+                    </h3>
+                    <span className="px-2.5 py-0.5 rounded-full bg-secondary text-[10px] font-mono font-bold text-foreground border border-border">
+                      {selectedLocation.code}
+                    </span>
+                  </div>
+                  <p className="text-xs text-muted-foreground font-sans mt-0.5">
+                    {selectedLocation.address}, {selectedLocation.city}, {selectedLocation.region}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDetailDrawerOpen(false)}
+                className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer transition-colors"
+                aria-label="Close location detail modal"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Core Info Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Type</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 block">{selectedLocation.type}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Status</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 block">{selectedLocation.status}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Manager</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 block truncate">{selectedLocation.manager}</span>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Staff</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 block">{selectedLocation.assignedUsersCount} Members</span>
+              </div>
+            </div>
+
+            {/* Inventory & Expiry Metrics */}
+            <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-3">
+              <span className="font-bold uppercase text-foreground text-xs block">Inventory & Expiry Snapshot</span>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                <div>
+                  <span className="text-muted-foreground text-[10.5px] block">Total Stock:</span>
+                  <strong className="text-foreground text-sm">{selectedLocation.totalProducts} SKUs</strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[10.5px] block">Inventory Value:</span>
+                  <strong className="text-foreground text-sm">₹{selectedLocation.inventoryValue.toLocaleString()}</strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[10.5px] block">Capacity Used:</span>
+                  <strong className="text-foreground text-sm">
+                    {Math.min(100, Math.round((selectedLocation.totalProducts / (selectedLocation.type === "Warehouse" ? 800 : 500)) * 100))}%
+                  </strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[10.5px] block">Tracked Perishables:</span>
+                  <strong className="text-foreground text-sm">{selectedLocation.expiryTracked} SKUs</strong>
+                </div>
+                <div>
+                  <span className="text-muted-foreground text-[10.5px] block">Expiry Risk Lots:</span>
+                  <strong className="text-destructive text-sm">{selectedLocation.expiryRiskCount} Lots</strong>
+                </div>
+              </div>
+
+              {/* Expiry Breakdown Bar */}
+              {selectedLocation.expiryBreakdown && (
+                <div className="pt-2 border-t border-border space-y-1.5">
+                  <span className="text-[10px] text-muted-foreground uppercase font-bold block">Perishable Horizon Breakdown</span>
+                  <div className="flex items-center gap-2 flex-wrap text-[11px]">
+                    <span className="px-2 py-0.5 rounded-full bg-destructive/20 text-destructive font-bold">
+                      Critical: {selectedLocation.expiryBreakdown.critical}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
+                      High: {selectedLocation.expiryBreakdown.high}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground font-bold">
+                      Medium: {selectedLocation.expiryBreakdown.medium}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 font-bold">
+                      Safe: {selectedLocation.expiryBreakdown.safe}
+                    </span>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Manager Contact & Location Meta */}
+            <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-2">
+              <span className="font-bold uppercase text-foreground text-xs block">Site Contact & Telemetry</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-muted-foreground block text-[10.5px]">Manager Email:</span>
+                  <span className="text-foreground font-bold">{selectedLocation.managerEmail}</span>
+                </div>
+                {selectedLocation.phone && (
+                  <div>
+                    <span className="text-muted-foreground block text-[10.5px]">Facility Phone:</span>
+                    <span className="text-foreground font-bold">{selectedLocation.phone}</span>
+                  </div>
+                )}
+                <div>
+                  <span className="text-muted-foreground block text-[10.5px]">Last Reconciled:</span>
+                  <span className="text-foreground font-bold">{selectedLocation.lastUpdated}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10.5px]">Country / Region:</span>
+                  <span className="text-foreground font-bold">{selectedLocation.country} · {selectedLocation.region}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Footer Buttons */}
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDetailDrawerOpen(false);
+                  handleOpenEdit(selectedLocation);
+                }}
+                className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer transition-colors"
+              >
+                Edit Facility
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDetailDrawerOpen(false)}
+                className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-primary/90 cursor-pointer shadow-none transition-colors"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

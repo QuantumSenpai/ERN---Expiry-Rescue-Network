@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Search,
   Plus,
@@ -308,9 +308,9 @@ export default function RetailerSuppliers() {
                       <p className="text-[10px] text-muted-foreground">{s.phone}</p>
                     </td>
                     <td className="px-4 py-3.5 text-center font-bold text-foreground">{s.performanceScore}%</td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${
                           s.status === "Preferred"
                             ? "bg-primary text-primary-foreground"
                             : s.status === "Active"
@@ -360,9 +360,9 @@ export default function RetailerSuppliers() {
                     <td className="px-4 py-3.5 text-muted-foreground">{p.destinationLocation}</td>
                     <td className="px-4 py-3.5 text-right font-bold text-foreground">{p.totalUnits}</td>
                     <td className="px-4 py-3.5 text-right font-bold text-foreground">₹{p.totalValue.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${
                           p.status === "Received"
                             ? "bg-primary text-primary-foreground"
                             : p.status === "In Transit"

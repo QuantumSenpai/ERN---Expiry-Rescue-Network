@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   AreaChart,
@@ -410,8 +410,8 @@ export default function Clearance() {
                       <td className="px-4 py-3.5 text-muted-foreground">{c.category}</td>
                       <td className="px-4 py-3.5 text-muted-foreground">{c.store}</td>
                       <td className="px-4 py-3.5 font-bold text-foreground">{c.discount}</td>
-                      <td className="px-4 py-3.5">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase bg-primary text-primary-foreground">
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center bg-primary text-primary-foreground">
                           {c.status}
                         </span>
                       </td>

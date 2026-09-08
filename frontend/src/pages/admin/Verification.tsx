@@ -57,10 +57,10 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 const STATUS_STYLES: Record<VStatus, string> = {
-  Pending: "bg-[#C8D9E6] text-[#2F4156]",
-  "Under Review": "bg-[#567C8D] text-white",
-  Verified: "bg-[#2F4156] text-white",
-  Rejected: "bg-red-100 text-red-700",
+  Pending: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 dark:border dark:border-amber-800/40 font-bold",
+  "Under Review": "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 dark:border dark:border-sky-800/40 font-bold",
+  Verified: "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border dark:border-emerald-800/40 font-bold",
+  Rejected: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 dark:border dark:border-rose-800/40 font-bold",
 };
 
 const TYPE_ICON: Record<EntityType, typeof User> = {
@@ -157,10 +157,10 @@ export default function AdminVerification() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors ${
+                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors whitespace-nowrap ${
                   statusFilter === s
-                    ? "bg-[#2F4156] text-white"
-                    : "bg-transparent text-[#2F4156] border border-[#2F4156]/20 hover:bg-[#567C8D] hover:text-white"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "bg-card text-foreground border border-border hover:bg-secondary hover:text-foreground font-medium"
                 }`}
               >
                 {s}
@@ -203,9 +203,9 @@ export default function AdminVerification() {
                     <td className="py-3 pr-3 text-muted-foreground font-mono text-xs">
                       {e.submittedDate}
                     </td>
-                    <td className="py-3 pr-3">
+                    <td className="py-3 pr-3 whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-mono ${STATUS_STYLES[e.status]}`}
+                        className={`px-2.5 py-1 rounded-full text-xs font-mono whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLES[e.status]}`}
                       >
                         {e.status}
                       </span>
@@ -277,19 +277,19 @@ export default function AdminVerification() {
             <div className="flex flex-col gap-2 pt-2">
               <button
                 onClick={() => updateStatus(selected.id, "Verified")}
-                className="w-full py-2.5 rounded-full bg-[#2F4156] text-white text-sm font-medium hover:bg-[#567C8D] active:scale-97 transition-colors"
+                className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 active:scale-97 transition-colors shadow-none"
               >
                 Approve
               </button>
               <button
                 onClick={() => updateStatus(selected.id, "Rejected")}
-                className="w-full py-2.5 rounded-full border border-red-500 text-red-600 text-sm font-medium hover:bg-red-50 active:scale-97 transition-colors"
+                className="w-full py-2.5 rounded-full border border-destructive text-destructive text-sm font-medium hover:bg-destructive/10 active:scale-97 transition-colors"
               >
                 Reject
               </button>
               <button
                 onClick={() => updateStatus(selected.id, "Under Review")}
-                className="w-full py-2.5 rounded-full border border-[#2F4156]/30 text-[#2F4156] text-sm font-medium hover:bg-[#C8D9E6]/30 active:scale-97 transition-colors"
+                className="w-full py-2.5 rounded-full border border-border text-foreground text-sm font-medium hover:bg-secondary active:scale-97 transition-colors"
               >
                 Request More Info
               </button>

@@ -138,10 +138,10 @@ export default function AdminNotifications() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors ${
+                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors whitespace-nowrap ${
                   statusFilter === s
-                    ? "bg-[#2F4156] text-white"
-                    : "bg-transparent text-[#2F4156] border border-[#2F4156]/20 hover:bg-[#567C8D] hover:text-white"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "bg-card text-foreground border border-border hover:bg-secondary hover:text-foreground font-medium"
                 }`}
               >
                 {s}
@@ -172,8 +172,8 @@ export default function AdminNotifications() {
                   <td className="py-3 pr-3 text-muted-foreground text-xs">{n.audience}</td>
                   <td className="py-3 pr-3 text-muted-foreground font-mono text-xs">{n.sentDate}</td>
                   <td className="py-3 pr-3 text-muted-foreground">{n.reach.toLocaleString()}</td>
-                  <td className="py-3 pr-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-mono ${STATUS_STYLES[n.status]}`}>
+                  <td className="py-3 pr-3 whitespace-nowrap">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-mono whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLES[n.status]}`}>
                       {n.status}
                     </span>
                   </td>

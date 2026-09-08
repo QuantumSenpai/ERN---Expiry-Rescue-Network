@@ -42,13 +42,13 @@ const MOCK_TRANSFERS: Transfer[] = [
 ];
 
 const STATUS_STYLE: Record<TransferStatus, string> = {
-  Pending: "bg-secondary text-foreground",
-  Accepted: "bg-accent text-accent-foreground",
-  "Pickup Scheduled": "bg-secondary text-foreground",
-  "Picked Up": "bg-accent text-accent-foreground",
-  "In Transit": "bg-primary text-primary-foreground",
-  Delivered: "bg-primary text-primary-foreground",
-  Cancelled: "bg-destructive text-destructive-foreground",
+  Pending: "bg-secondary text-foreground font-semibold border border-border",
+  Accepted: "bg-accent text-accent-foreground font-bold",
+  "Pickup Scheduled": "bg-sky-100 text-sky-800 dark:bg-secondary dark:text-foreground font-bold border border-sky-300 dark:border-border",
+  "Picked Up": "bg-accent text-accent-foreground font-bold",
+  "In Transit": "bg-primary text-primary-foreground font-bold",
+  Delivered: "bg-emerald-100 text-emerald-800 dark:bg-primary dark:text-primary-foreground font-bold border border-emerald-300 dark:border-transparent",
+  Cancelled: "bg-destructive/15 text-destructive font-bold border border-destructive/30",
 };
 
 export default function AdminTransfers() {
@@ -202,8 +202,8 @@ export default function AdminTransfers() {
                     {t.source} → {t.destination}
                   </td>
                   <td className="px-4 py-3.5 text-muted-foreground font-bold">{t.assignedTo}</td>
-                  <td className="px-4 py-3.5">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${STATUS_STYLE[t.status]}`}>
+                  <td className="px-4 py-3.5 whitespace-nowrap">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLE[t.status]}`}>
                       {t.status}
                     </span>
                   </td>

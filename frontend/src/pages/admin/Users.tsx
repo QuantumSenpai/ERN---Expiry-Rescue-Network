@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Users as UsersIcon,
   UserCheck,
@@ -11,6 +11,8 @@ import {
   CheckCircle2,
   AlertTriangle,
   ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
   Download,
   X,
   Mail,
@@ -927,51 +929,91 @@ justify-between transition-all ern-card-glow ${
 
                 <th
                   onClick={() => handleSort("name")}
-                  className="py-4 px-5 min-w-[240px] cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-5 min-w-[240px] cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>User</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "name" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("role")}
-                  className="py-4 px-4 w-32 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 w-32 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Role</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "role" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("location")}
-                  className="py-4 px-4 min-w-[180px] cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 min-w-[180px] cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Facility</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "location" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("status")}
-                  className="py-4 px-4 w-40 cursor-pointer hover:text-foreground font-bold uppercase"
+                  className="py-4 px-4 w-40 cursor-pointer hover:text-foreground font-bold uppercase group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Status</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "status" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
                 <th
                   onClick={() => handleSort("lastActive")}
-                  className="py-4 px-4 w-36 cursor-pointer hover:text-foreground font-bold uppercase hidden md:table-cell"
+                  className="py-4 px-4 w-36 cursor-pointer hover:text-foreground font-bold uppercase hidden md:table-cell group"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>Last Active</span>
-                    <ArrowUpDown className="size-3" />
+                    {sortField === "lastActive" ? (
+                      sortAsc ? (
+                        <ArrowUp className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      ) : (
+                        <ArrowDown className="size-3 text-foreground dark:text-foreground shrink-0" />
+                      )
+                    ) : (
+                      <ArrowUpDown className="size-3 text-foreground/45 group-hover:text-foreground dark:text-foreground/60 dark:group-hover:text-foreground shrink-0 transition-colors" />
+                    )}
                   </div>
                 </th>
 
@@ -1071,7 +1113,8 @@ justify-between transition-all ern-card-glow ${
                           <button
                             onClick={() => handleOpenDetail(u)}
                             className="size-8 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center text-foreground transition-colors cursor-pointer"
-                            title="View Details"
+                            title="View user"
+                            aria-label="View user"
                           >
                             <Eye className="size-3.5" />
                           </button>
@@ -1079,7 +1122,8 @@ justify-between transition-all ern-card-glow ${
                           <button
                             onClick={() => handleOpenEdit(u)}
                             className="size-8 rounded-full bg-secondary hover:bg-secondary/80 flex items-center justify-center text-foreground transition-colors cursor-pointer"
-                            title="Edit"
+                            title={`Edit ${u.name}`}
+                            aria-label={`Edit ${u.name}`}
                           >
                             <Edit2 className="size-3.5" />
                           </button>
@@ -1354,6 +1398,133 @@ justify-between transition-all ern-card-glow ${
                 className="px-5 py-2 rounded-full bg-primary text-primary-foreground text-xs font-mono uppercase font-bold cursor-pointer hover:bg-[#567C8D]"
               >
                 {confirmDialog.actionLabel}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* User Detail Modal */}
+      {isDetailDrawerOpen && selectedUser && (
+        <div
+          onClick={() => setIsDetailDrawerOpen(false)}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in"
+          role="dialog"
+          aria-label={`User details for ${selectedUser.name}`}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-5 ern-card-glow max-h-[90vh] overflow-y-auto"
+          >
+            {/* Header */}
+            <div className="flex items-start justify-between pb-3 border-b border-border">
+              <div className="flex items-center gap-3.5">
+                <div className="size-11 rounded-full bg-secondary border border-border flex items-center justify-center font-bold text-foreground text-sm shrink-0 font-display">
+                  {selectedUser.name.charAt(0)}
+                </div>
+                <div>
+                  <h3 className="font-display font-bold text-xl uppercase text-foreground leading-tight">
+                    {selectedUser.name}
+                  </h3>
+                  <p className="text-xs text-muted-foreground font-mono mt-0.5">
+                    {selectedUser.email}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsDetailDrawerOpen(false)}
+                className="p-1.5 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground cursor-pointer transition-colors"
+                aria-label="Close user details modal"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+
+            {/* Core Info Grid */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Assigned Role</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 inline-flex items-center gap-1">
+                  {selectedUser.role === "Admin" && <Shield className="size-3.5 text-primary" />}
+                  <span>{selectedUser.role}</span>
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Account Status</span>
+                <span className="font-bold text-foreground text-sm uppercase mt-0.5 block">
+                  {selectedUser.status}
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Operating Facility</span>
+                <span className="font-bold text-foreground text-sm mt-0.5 block truncate flex items-center gap-1">
+                  <MapPin className="size-3 text-muted-foreground shrink-0" />
+                  <span>{selectedUser.location}</span>
+                </span>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-secondary/40 border border-border">
+                <span className="text-muted-foreground text-[10.5px] uppercase font-bold block">Last Active</span>
+                <span className="font-bold text-foreground text-sm mt-0.5 block">
+                  {selectedUser.lastActive}
+                </span>
+              </div>
+            </div>
+
+            {/* Contact & Registration Telemetry */}
+            <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-2 text-xs">
+              <span className="font-bold uppercase text-foreground text-xs block">Contact & Access Meta</span>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <span className="text-muted-foreground block text-[10.5px]">Phone:</span>
+                  <span className="text-foreground font-bold">{selectedUser.phone || "Not available"}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground block text-[10.5px]">Member Since:</span>
+                  <span className="text-foreground font-bold">{selectedUser.joinedDate}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Recent Operational Activity */}
+            {selectedUser.recentActivity && selectedUser.recentActivity.length > 0 && (
+              <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-2 text-xs">
+                <span className="font-bold uppercase text-foreground text-xs block">Recent Activity Log</span>
+                <div className="space-y-2">
+                  {selectedUser.recentActivity.map((act, i) => (
+                    <div key={i} className="flex items-start justify-between gap-2 text-[11px] pb-1.5 border-b border-border/50 last:border-0 last:pb-0">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-foreground font-semibold truncate">{act.action}</p>
+                        <span className="text-muted-foreground font-mono text-[10px]">{act.location}</span>
+                      </div>
+                      <span className="text-muted-foreground font-mono text-[10px] shrink-0">{act.time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Footer Actions */}
+            <div className="flex items-center justify-between pt-2 border-t border-border">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsDetailDrawerOpen(false);
+                  handleOpenEdit(selectedUser);
+                }}
+                className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer transition-colors"
+              >
+                Edit Member
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDetailDrawerOpen(false)}
+                className="px-5 py-2 rounded-full bg-primary text-primary-foreground uppercase font-bold hover:bg-primary/90 cursor-pointer shadow-none transition-colors"
+              >
+                Close
               </button>
             </div>
           </div>

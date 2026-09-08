@@ -136,10 +136,10 @@ export default function AdminAuditLogs() {
               <button
                 key={s}
                 onClick={() => setSeverityFilter(s)}
-                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors ${
+                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors whitespace-nowrap ${
                   severityFilter === s
-                    ? "bg-[#2F4156] text-white"
-                    : "bg-transparent text-[#2F4156] border border-[#2F4156]/20 hover:bg-[#567C8D] hover:text-white"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "bg-card text-foreground border border-border hover:bg-secondary hover:text-foreground font-medium"
                 }`}
               >
                 {s}

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import Footer from "@/components/Footer";
 import ItemCard, { type ItemCardProps } from "@/components/ItemCard";
 import Hero from "./Hero";
@@ -224,7 +224,7 @@ export default function Home() {
         {/* Live Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredItems.map((item, idx) => (
-            <ScrollReveal key={item.id} direction="up" delay={idx * 50}>
+            <ScrollReveal key={item.id} direction="up" delay={idx * 50} className="h-full">
               <ItemCard {...item} />
             </ScrollReveal>
           ))}

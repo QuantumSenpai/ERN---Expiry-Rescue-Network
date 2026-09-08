@@ -1,4 +1,4 @@
-﻿import React, { useState } from "react";
+import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -12,6 +12,10 @@ import {
   ArrowLeft,
   Sun,
   Moon,
+  KeyRound,
+  CheckCircle2,
+  AlertCircle,
+  X,
 } from "lucide-react";
 import {
   FaBarcode,
@@ -64,6 +68,75 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  // Password Recovery State (Demo / Frontend)
+  const [isForgotOpen, setIsForgotOpen] = useState(false);
+  const [recoveryStep, setRecoveryStep] = useState<1 | 2 | 3 | 4>(1);
+  const [recoveryEmail, setRecoveryEmail] = useState("");
+  const [recoveryOtp, setRecoveryOtp] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [recoveryError, setRecoveryError] = useState("");
+
+  const handleOpenForgot = () => {
+    setRecoveryStep(1);
+    setRecoveryEmail(email && !email.includes("••••") ? email : "");
+    setRecoveryOtp("");
+    setNewPassword("");
+    setConfirmPassword("");
+    setRecoveryError("");
+    setIsForgotOpen(true);
+  };
+
+  const handleSendResetCode = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError("");
+    const trimmed = recoveryEmail.trim();
+    if (!trimmed || !trimmed.includes("@") || !trimmed.includes(".")) {
+      setRecoveryError("Please enter a valid email address.");
+      return;
+    }
+    setRecoveryLoading(true);
+    setTimeout(() => {
+      setRecoveryLoading(false);
+      setRecoveryStep(2);
+    }, 600);
+  };
+
+  const handleVerifyOtp = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError("");
+    const trimmed = recoveryOtp.trim();
+    if (!trimmed || trimmed.length < 4) {
+      setRecoveryError("Please enter the 4-digit verification code.");
+      return;
+    }
+    setRecoveryLoading(true);
+    setTimeout(() => {
+      setRecoveryLoading(false);
+      setRecoveryStep(3);
+    }, 500);
+  };
+
+  const handleResetPassword = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError("");
+    if (!newPassword || newPassword.length < 6) {
+      setRecoveryError("Password must be at least 6 characters.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setRecoveryError("Passwords do not match.");
+      return;
+    }
+    setRecoveryLoading(true);
+    setTimeout(() => {
+      setRecoveryLoading(false);
+      setPassword(newPassword);
+      setRecoveryStep(4);
+    }, 600);
+  };
 
   const handleRoleSelect = (role: AccessRole) => {
     setSelectedRole(role);
@@ -431,7 +504,7 @@ export default function Login() {
 
                   <button
                     type="button"
-                    onClick={() => alert("Password reset instructions sent to your email!")}
+                    onClick={handleOpenForgot}
                     className="font-body text-foreground hover:underline font-bold transition-colors cursor-pointer"
                   >
                     Forgot password?
@@ -484,6 +557,252 @@ export default function Login() {
           </div>
         </div>
       </main>
+
+      {/* Password Recovery Modal (Frontend Mock Simulation) */}
+      <AnimatePresence>
+        {isForgotOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-sans text-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="w-full max-w-md bg-card border border-border rounded-3xl p-6 sm:p-7 shadow-2xl text-foreground space-y-5 ern-card-glow relative"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2.5">
+                  <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                    <KeyRound className="size-4" />
+                  </div>
+                  <div>
+                    <h3 className="font-display font-bold text-lg text-foreground">
+                      Reset Password
+                    </h3>
+                    <p className="text-[11px] font-mono text-muted-foreground">
+                      Frontend Demo Recovery Flow
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsForgotOpen(false)}
+                  className="p-1.5 rounded-full hover:bg-secondary text-muted-foreground hover:text-foreground cursor-pointer transition-colors"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              {/* Step 1: Email Verification */}
+              {recoveryStep === 1 && (
+                <form onSubmit={handleSendResetCode} className="space-y-4">
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    Enter the email address registered with your ERN account to receive a simulated recovery verification code.
+                  </p>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono font-bold uppercase text-foreground block">
+                      Account Email
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                      <input
+                        type="email"
+                        value={recoveryEmail}
+                        onChange={(e) => setRecoveryEmail(e.target.value)}
+                        placeholder="you@company.com"
+                        className="w-full pl-10 pr-3.5 py-2.5 rounded-xl bg-background border border-border focus:border-primary text-foreground outline-none font-sans text-xs"
+                      />
+                    </div>
+                  </div>
+
+                  {recoveryError && (
+                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      <span>{recoveryError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={() => setIsForgotOpen(false)}
+                      className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground font-mono font-bold text-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={recoveryLoading}
+                      className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-mono font-bold text-xs uppercase hover:opacity-90 cursor-pointer flex items-center gap-2"
+                    >
+                      {recoveryLoading ? "Sending Code..." : "Send Reset Code →"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 2: Verification Code (OTP) */}
+              {recoveryStep === 2 && (
+                <form onSubmit={handleVerifyOtp} className="space-y-4">
+                  <div className="p-3 rounded-2xl bg-secondary/50 border border-border text-xs space-y-1">
+                    <p className="text-muted-foreground">
+                      Simulated OTP sent to <strong className="text-foreground">{recoveryEmail}</strong>.
+                    </p>
+                    <p className="font-mono text-[11px] text-primary font-bold">
+                      Demo Code: <span className="underline">7492</span>
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[11px] font-mono font-bold uppercase text-foreground block">
+                      Enter 4-Digit Code
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={4}
+                      value={recoveryOtp}
+                      onChange={(e) => setRecoveryOtp(e.target.value.replace(/\D/g, ""))}
+                      placeholder="e.g. 7492"
+                      className="w-full text-center tracking-[0.5em] text-lg py-2.5 rounded-xl bg-background border border-border focus:border-primary text-foreground outline-none font-mono font-bold"
+                    />
+                  </div>
+
+                  {recoveryError && (
+                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      <span>{recoveryError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-between pt-2 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={() => setRecoveryStep(1)}
+                      className="px-3 py-1.5 text-xs text-muted-foreground hover:text-foreground font-mono"
+                    >
+                      ← Change Email
+                    </button>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setRecoveryOtp("7492")}
+                        className="px-3 py-1.5 text-xs text-primary hover:underline font-mono"
+                      >
+                        Auto-Fill
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={recoveryLoading}
+                        className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-mono font-bold text-xs uppercase hover:opacity-90 cursor-pointer"
+                      >
+                        {recoveryLoading ? "Verifying..." : "Verify Code →"}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 3: New Password */}
+              {recoveryStep === 3 && (
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <p className="text-xs text-muted-foreground">
+                    Code verified. Enter your new password below.
+                  </p>
+
+                  <div className="space-y-3">
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-mono font-bold uppercase text-foreground block">
+                        New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <input
+                          type="password"
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="Min 6 characters"
+                          className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-background border border-border focus:border-primary text-foreground outline-none font-sans text-xs"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-[11px] font-mono font-bold uppercase text-foreground block">
+                        Confirm New Password
+                      </label>
+                      <div className="relative">
+                        <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                        <input
+                          type="password"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="Re-enter password"
+                          className="w-full pl-10 pr-3.5 py-2 rounded-xl bg-background border border-border focus:border-primary text-foreground outline-none font-sans text-xs"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {recoveryError && (
+                    <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs flex items-center gap-2">
+                      <AlertCircle className="size-3.5 shrink-0" />
+                      <span>{recoveryError}</span>
+                    </div>
+                  )}
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-border">
+                    <button
+                      type="button"
+                      onClick={() => setRecoveryStep(2)}
+                      className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground font-mono font-bold text-xs"
+                    >
+                      Back
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={recoveryLoading}
+                      className="px-5 py-2 rounded-full bg-primary text-primary-foreground font-mono font-bold text-xs uppercase hover:opacity-90 cursor-pointer"
+                    >
+                      {recoveryLoading ? "Updating..." : "Save Password"}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Step 4: Success Screen */}
+              {recoveryStep === 4 && (
+                <div className="text-center py-4 space-y-4">
+                  <div className="size-14 mx-auto rounded-full bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-500">
+                    <CheckCircle2 className="size-7" />
+                  </div>
+                  <div>
+                    <h4 className="font-display font-bold text-lg text-foreground">
+                      Password Successfully Reset
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-1 max-w-xs mx-auto">
+                      Your demo credentials have been updated. You can now sign in to your ERN workspace.
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsForgotOpen(false);
+                      setRecoveryStep(1);
+                    }}
+                    className="w-full py-3 rounded-full bg-primary text-primary-foreground font-mono font-bold text-xs uppercase hover:opacity-90 cursor-pointer"
+                  >
+                    Back to Sign In
+                  </button>
+                </div>
+              )}
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

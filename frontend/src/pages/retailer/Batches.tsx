@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "react-router-dom";
 import {
   Plus,
@@ -13,23 +13,31 @@ import {
   MapPin,
   Percent,
 } from "lucide-react";
-import { MASTER_BATCHES } from "@/data/mockInventory";
+import { inventoryStore, INVENTORY_UPDATE_EVENT } from "@/lib/inventoryStore";
 import type { BatchItem, ExpiryStatus } from "@/types/inventory";
 import StoreLocationModal from "@/components/StoreLocationModal";
 
 const PAGE_SIZE = 8;
 
 const EXPIRY_STATUS_STYLE: Record<ExpiryStatus, string> = {
-  "Not Applicable": "bg-secondary text-muted-foreground",
-  Safe: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400",
-  Warning: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  "High Risk": "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  Critical: "bg-destructive/15 text-destructive animate-pulse",
-  Expired: "bg-muted text-muted-foreground",
+  "Not Applicable": "bg-secondary text-muted-foreground font-semibold border border-border",
+  Safe: "bg-emerald-100 text-emerald-800 dark:bg-emerald-500/15 dark:text-emerald-400 font-bold border border-emerald-500/30",
+  Warning: "bg-sky-100 text-sky-800 dark:bg-blue-500/15 dark:text-blue-400 font-bold border border-sky-500/30",
+  "High Risk": "bg-amber-100 text-amber-800 dark:bg-amber-500/15 dark:text-amber-400 font-bold border border-amber-500/30",
+  Critical: "bg-rose-100 text-rose-800 dark:bg-destructive/15 dark:text-destructive font-bold border border-destructive/30 animate-pulse",
+  Expired: "bg-muted text-muted-foreground font-bold border border-border",
 };
 
 export default function RetailerBatches() {
-  const [batches] = useState<BatchItem[]>(MASTER_BATCHES);
+  const [batches, setBatches] = useState<BatchItem[]>(() => inventoryStore.getStoreBatches());
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      setBatches(inventoryStore.getStoreBatches());
+    };
+    window.addEventListener(INVENTORY_UPDATE_EVENT, handleUpdate);
+    return () => window.removeEventListener(INVENTORY_UPDATE_EVENT, handleUpdate);
+  }, []);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [storeFilter, setStoreFilter] = useState("All Stores");
@@ -242,7 +250,7 @@ export default function RetailerBatches() {
                   </td>
                   <td className="px-4 py-3 font-mono whitespace-nowrap">
                     <span
-                      className={`font-bold ${
+                      className={`font-bold whitespace-nowrap inline-flex items-center gap-1 ${
                         (b.daysRemaining || 0) <= 3
                           ? "text-destructive"
                           : (b.daysRemaining || 0) <= 7
@@ -250,15 +258,15 @@ export default function RetailerBatches() {
                           : "text-emerald-600 dark:text-emerald-400"
                       }`}
                     >
-                      {b.daysRemaining} days left
+                      {b.daysRemaining}D LEFT
                     </span>
                   </td>
                   <td className="px-4 py-3 font-mono">
                     <span className="font-bold text-foreground">{b.qtyLeft}</span> / {b.qtyTotal}
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 whitespace-nowrap">
                     <span
-                      className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap inline-flex items-center justify-center ${
                         EXPIRY_STATUS_STYLE[b.expiryStatus]
                       }`}
                     >

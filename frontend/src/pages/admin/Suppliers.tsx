@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Plus,
   Search,
@@ -186,6 +186,68 @@ export default function AdminSuppliers() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Controlled Add Supplier Form State
+  const [newSupplierName, setNewSupplierName] = useState("");
+  const [newSupplierEmail, setNewSupplierEmail] = useState("");
+  const [newSupplierCategory, setNewSupplierCategory] = useState("Dairy & Grocery");
+  const [newSupplierContact, setNewSupplierContact] = useState("");
+  const [newSupplierPhone, setNewSupplierPhone] = useState("");
+  const [newSupplierAddress, setNewSupplierAddress] = useState("");
+  const [addSupplierError, setAddSupplierError] = useState("");
+
+  const handleOpenAddModal = () => {
+    setNewSupplierName("");
+    setNewSupplierEmail("");
+    setNewSupplierCategory("Dairy & Grocery");
+    setNewSupplierContact("");
+    setNewSupplierPhone("");
+    setNewSupplierAddress("");
+    setAddSupplierError("");
+    setIsAddModalOpen(true);
+  };
+
+  const handleSaveSupplier = (e: React.FormEvent) => {
+    e.preventDefault();
+    setAddSupplierError("");
+    const name = newSupplierName.trim();
+    const email = newSupplierEmail.trim();
+
+    if (!name) {
+      setAddSupplierError("Company name is required.");
+      return;
+    }
+    if (!email || !email.includes("@") || !email.includes(".")) {
+      setAddSupplierError("A valid primary contact email is required.");
+      return;
+    }
+
+    const nextCodeNum = suppliers.length + 1;
+    const code = `SUP-${String(nextCodeNum).padStart(3, "0")}`;
+
+    const newSup: Supplier = {
+      id: `sup-${Date.now()}`,
+      code,
+      name,
+      category: newSupplierCategory,
+      status: "Active",
+      primaryContact: newSupplierContact.trim() || "Operations Lead",
+      email,
+      phone: newSupplierPhone.trim() || "+91 80 4000 1200",
+      address: newSupplierAddress.trim() || "Industrial Area, Bengaluru",
+      totalProducts: 12,
+      lastOrderDate: "Just now",
+      performance: {
+        totalOrders: 1,
+        onTimeDelivery: 98.5,
+        fillRate: 99.0,
+      },
+    };
+
+    setSuppliers((prev) => [newSup, ...prev]);
+    setIsAddModalOpen(false);
+    showToast(`Supplier ${name} (${code}) added to active directory.`);
+  };
+
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
@@ -228,7 +290,7 @@ export default function AdminSuppliers() {
 
         <div className="flex items-center gap-2.5 flex-wrap font-mono text-xs font-bold uppercase">
           <button
-            onClick={() => setIsAddModalOpen(true)}
+            onClick={handleOpenAddModal}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary text-primary-foreground hover:bg-[#567C8D] transition-all cursor-pointer shadow-none active:scale-95"
           >
             <Plus className="size-4" />
@@ -337,9 +399,9 @@ export default function AdminSuppliers() {
                     </td>
                     <td className="px-4 py-3.5 text-right font-bold text-foreground">{s.totalProducts}</td>
                     <td className="px-4 py-3.5 text-center font-bold text-foreground">{s.performance.onTimeDelivery}%</td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${
                           s.status === "Active"
                             ? "bg-accent text-accent-foreground"
                             : "bg-secondary text-foreground"
@@ -387,14 +449,14 @@ export default function AdminSuppliers() {
                     <td className="px-4 py-3.5 text-muted-foreground font-bold">{p.locationName}</td>
                     <td className="px-4 py-3.5 text-right font-bold text-foreground">{p.totalQuantity}</td>
                     <td className="px-4 py-3.5 text-right font-bold text-foreground">₹{p.totalValue.toLocaleString()}</td>
-                    <td className="px-4 py-3.5 text-center">
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
                       <span
-                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${
                           p.status === "Received"
-                            ? "bg-accent text-accent-foreground"
+                            ? "bg-emerald-100 text-emerald-800 dark:bg-accent dark:text-accent-foreground font-bold border border-emerald-300 dark:border-transparent"
                             : p.status === "In Transit"
-                            ? "bg-destructive text-destructive-foreground"
-                            : "bg-primary text-primary-foreground"
+                            ? "bg-sky-100 text-sky-800 dark:bg-sky-950/60 dark:text-sky-300 font-bold border border-sky-300 dark:border-sky-800/40"
+                            : "bg-primary text-primary-foreground font-bold"
                         }`}
                       >
                         {p.status}
@@ -469,50 +531,89 @@ export default function AdminSuppliers() {
           <div className="w-full max-w-md bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 shadow-none text-foreground space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-border">
               <h3 className="font-display font-bold text-xl uppercase text-foreground">New Supplier</h3>
-              <button onClick={() => setIsAddModalOpen(false)} className="p-1 text-foreground">
+              <button
+                type="button"
+                onClick={() => setIsAddModalOpen(false)}
+                className="p-1 text-foreground hover:bg-secondary rounded-lg"
+              >
                 <X className="size-4" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            <form onSubmit={handleSaveSupplier} className="space-y-3">
+              {addSupplierError && (
+                <div className="p-2.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-bold">
+                  {addSupplierError}
+                </div>
+              )}
+
               <div>
-                <label className="text-muted-foreground uppercase font-bold block mb-1">Company Name</label>
+                <label className="text-muted-foreground uppercase font-bold block mb-1">Company Name *</label>
                 <input
                   type="text"
+                  required
+                  value={newSupplierName}
+                  onChange={(e) => setNewSupplierName(e.target.value)}
                   placeholder="e.g. Amul Dairy Federation"
-                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-sans text-xs outline-none"
+                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-sans text-xs outline-none focus:border-primary"
                 />
               </div>
 
               <div>
-                <label className="text-muted-foreground uppercase font-bold block mb-1">Primary Contact Email</label>
+                <label className="text-muted-foreground uppercase font-bold block mb-1">Primary Contact Email *</label>
                 <input
                   type="email"
+                  required
+                  value={newSupplierEmail}
+                  onChange={(e) => setNewSupplierEmail(e.target.value)}
                   placeholder="orders@amul.in"
-                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none"
+                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none focus:border-primary"
                 />
               </div>
-            </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setIsAddModalOpen(false)}
-                className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsAddModalOpen(false);
-                  showToast("Supplier contract saved.");
-                }}
-                className="px-5 py-2 rounded-full bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none active:scale-95"
-              >
-                Save Supplier
-              </button>
-            </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Category</label>
+                  <select
+                    value={newSupplierCategory}
+                    onChange={(e) => setNewSupplierCategory(e.target.value)}
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none focus:border-primary"
+                  >
+                    <option value="Dairy & Grocery">Dairy & Grocery</option>
+                    <option value="Bakery & Confectionery">Bakery & Confectionery</option>
+                    <option value="Beverages & Juices">Beverages & Juices</option>
+                    <option value="Fresh Produce">Fresh Produce</option>
+                    <option value="Frozen & Cold Chain">Frozen & Cold Chain</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Contact Person</label>
+                  <input
+                    type="text"
+                    value={newSupplierContact}
+                    onChange={(e) => setNewSupplierContact(e.target.value)}
+                    placeholder="e.g. Rajesh Kumar"
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-sans text-xs outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 rounded-full bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none active:scale-95"
+                >
+                  Save Supplier
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { Link } from "react-router-dom";
 import {
   Clock,
@@ -753,8 +753,8 @@ export default function ExpiryIntelligence() {
                   <span className="text-[10px] font-bold uppercase text-muted-foreground">
                     {item.recommendedAction} Deal
                   </span>
-                  <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold">
-                    {item.daysRemaining}d left
+                  <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-bold whitespace-nowrap inline-flex items-center gap-1">
+                    {item.daysRemaining}D LEFT
                   </span>
                 </div>
 
@@ -781,25 +781,22 @@ export default function ExpiryIntelligence() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={() =>
-                  !hasDeal(item.id) &&
-                  openPublishModal(item, item.recommendedAction === "Clearance" ? "Clearance" : "Rescue")
-                }
-                disabled={hasDeal(item.id)}
-                className={`w-full py-2.5 rounded-lg font-bold text-xs uppercase cursor-pointer transition-all shadow-none flex items-center justify-center gap-1.5 ${
-                  hasDeal(item.id)
-                    ? "bg-primary text-primary-foreground cursor-default font-bold"
-                    : "bg-primary text-primary-foreground hover:bg-[#567C8D] active:scale-95"
-                }`}
-              >
-                {hasDeal(item.id) ? (
-                  <span>Deal Published ✓</span>
-                ) : (
+              {hasDeal(item.id) ? (
+                <div className="w-full py-2.5 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1.5 bg-secondary text-foreground border border-border cursor-default select-none">
+                  <CheckCircle2 className="size-3.5 text-emerald-500 shrink-0" />
+                  <span>DEAL PUBLISHED ✓</span>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() =>
+                    openPublishModal(item, item.recommendedAction === "Clearance" ? "Clearance" : "Rescue")
+                  }
+                  className="w-full py-2.5 rounded-lg font-bold text-xs uppercase cursor-pointer transition-all shadow-none flex items-center justify-center gap-1.5 bg-primary text-primary-foreground hover:bg-primary/90 active:scale-95"
+                >
                   <span>Publish Deal →</span>
-                )}
-              </button>
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -895,7 +892,7 @@ export default function ExpiryIntelligence() {
                   </td>
                   <td className="px-4 py-3.5 text-center">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center gap-1 ${
                         batch.daysRemaining <= 3
                           ? "bg-primary text-primary-foreground"
                           : batch.daysRemaining <= 7
@@ -903,7 +900,7 @@ export default function ExpiryIntelligence() {
                           : "bg-primary text-primary-foreground"
                       }`}
                     >
-                      {batch.daysRemaining <= 0 ? "Expired" : `${batch.daysRemaining} days`}
+                      {batch.daysRemaining <= 0 ? "Expired" : `${batch.daysRemaining}D LEFT`}
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-right font-bold text-foreground">
@@ -1081,7 +1078,7 @@ export default function ExpiryIntelligence() {
             </div>
 
             {publishError && (
-              <div className="p-3 rounded-xl bg-[#2F4156] border border-[#2F4156] text-foreground text-xs font-bold">
+              <div className="p-3 rounded-xl bg-destructive/15 border border-destructive/30 text-destructive text-xs font-bold">
                 {publishError}
               </div>
             )}

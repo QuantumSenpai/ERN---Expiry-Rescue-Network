@@ -8,10 +8,10 @@ const CATEGORIES = ["Bakery", "Produce", "Dairy", "Beverages", "Snacks", "Grocer
 const STATUS_OPTIONS: ListingStatus[] = ["Active", "Urgent", "Paused", "Expired"];
 
 const STATUS_STYLE: Record<ListingStatus, string> = {
-  Active: "bg-primary text-primary-foreground",
-  Urgent: "bg-[#2F4156] border border-[#2F4156] text-foreground",
-  Paused: "bg-secondary text-muted-foreground",
-  Expired: "bg-destructive/20 text-destructive",
+  Active: "bg-primary text-primary-foreground font-bold",
+  Urgent: "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-300 dark:border-amber-800/40 font-bold",
+  Paused: "bg-secondary text-muted-foreground font-bold border border-border",
+  Expired: "bg-destructive/15 text-destructive font-bold border border-destructive/30",
 };
 
 const BLANK_FORM = { name: "", donor: "", category: "Bakery", price: 0, discount: 50, status: "Active" as ListingStatus, expires: "4h 00m" };
@@ -191,8 +191,8 @@ export default function AdminListings() {
                     <Clock className="size-3.5 text-foreground" />
                     <span>{l.expires}</span>
                   </td>
-                  <td className="py-4 px-4">
-                    <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase ${STATUS_STYLE[l.status]}`}>
+                  <td className="py-4 px-4 whitespace-nowrap">
+                    <span className={`text-[10px] font-mono px-2.5 py-0.5 rounded-full font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLE[l.status]}`}>
                       {l.status}
                     </span>
                   </td>

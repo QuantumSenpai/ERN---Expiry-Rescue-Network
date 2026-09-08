@@ -1,4 +1,4 @@
-﻿import { useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import LiquidGlassCard from "@/components/LiquidGlassCard";
 import {
   Plus,
@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { STORES_DATA } from "@/data/storesData";
+import { inventoryStore } from "@/lib/inventoryStore";
 
 const CATEGORIES = [
   "Dairy",
@@ -57,12 +58,66 @@ export default function AddProduct() {
   const [criticalDiscount, setCriticalDiscount] = useState("60");
 
   const [submitted, setSubmitted] = useState(false);
+  const [formError, setFormError] = useState("");
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
+    setFormError("");
+
+    if (!name.trim()) {
+      setFormError("Product name is required.");
+      return;
+    }
+    const parsedPrice = parseFloat(price);
+    if (isNaN(parsedPrice) || parsedPrice <= 0) {
+      setFormError("A valid price greater than 0 is required.");
+      return;
+    }
+    const parsedQty = parseInt(quantity, 10);
+    if (isNaN(parsedQty) || parsedQty <= 0) {
+      setFormError("A valid stock quantity greater than 0 is required.");
+      return;
+    }
+    if (expiryTrackingEnabled && !expiryDate) {
+      setFormError("Expiry date is required for expiry-tracked items.");
+      return;
+    }
+
+    const parsedDiscount = parseFloat(warningDiscount) || 20;
+    const rescuePrice = Math.round(parsedPrice * (1 - parsedDiscount / 100));
+
+    let effectiveProductId = sku.trim() || `PRD-${Date.now()}`;
+    const nameLower = name.toLowerCase();
+    if (nameLower.includes("milk")) effectiveProductId = "PRD-AML-01";
+    else if (nameLower.includes("bread")) effectiveProductId = "PRD-BRD-01";
+    else if (nameLower.includes("dahi") || nameLower.includes("curd")) effectiveProductId = "PRD-CRD-01";
+    else if (nameLower.includes("juice")) effectiveProductId = "PRD-JUC-01";
+    else if (nameLower.includes("atta")) effectiveProductId = "PRD-ATT-01";
+    else if (nameLower.includes("oil")) effectiveProductId = "PRD-OIL-01";
+    else if (nameLower.includes("lays") || nameLower.includes("chips")) effectiveProductId = "PRD-LAY-01";
+
+    inventoryStore.addStockToProduct({
+      store,
+      productId: effectiveProductId,
+      name: name.trim(),
+      brand: brand.trim() || "Brand",
+      category,
+      quantity: parsedQty,
+      batchNo: batchNo.trim() || `LOT-${Math.floor(100 + Math.random() * 900)}`,
+      mfgDate: mfgDate || new Date().toISOString().split("T")[0],
+      expiryDate: expiryTrackingEnabled ? expiryDate : undefined,
+      unitPrice: parsedPrice,
+      rescuePrice,
+      unit,
+    });
+
     setSubmitted(true);
     setTimeout(() => {
-      navigate("/retailer/inventory");
+      if (window.location.pathname.startsWith("/admin")) {
+        navigate("/admin/inventory");
+      } else {
+        navigate("/retailer/inventory");
+      }
     }, 1200);
   };
 
@@ -474,11 +529,23 @@ export default function AddProduct() {
             )}
           </div>
 
+          {formError && (
+            <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-mono font-bold">
+              {formError}
+            </div>
+          )}
+
           {/* Form Actions */}
           <div className="flex items-center justify-end gap-3 pt-3 border-t border-border">
             <button
               type="button"
-              onClick={() => navigate("/retailer/products")}
+              onClick={() =>
+                navigate(
+                  window.location.pathname.startsWith("/admin")
+                    ? "/admin/inventory"
+                    : "/retailer/inventory"
+                )
+              }
               className="px-4 py-2.5 rounded-xl border border-border text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors cursor-pointer"
             >
               Cancel

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Eye,
   ShieldCheck,
@@ -113,7 +113,7 @@ export default function MarketplacePreview() {
                 <div className="flex items-center justify-between pt-1 border-t border-border/80">
                   <span className="text-muted-foreground line-through">₹{deal.originalPrice}</span>
                   <span className="font-bold text-status-approved-text font-mono text-sm">₹{deal.rescuePrice}</span>
-                  <span className="text-[10px] text-muted-foreground">{deal.daysRemaining}d left</span>
+                  <span className="text-[10px] text-muted-foreground whitespace-nowrap inline-flex items-center font-bold">{deal.daysRemaining}D LEFT</span>
                 </div>
               </div>
             ))}
@@ -138,7 +138,7 @@ export default function MarketplacePreview() {
                     ? "bg-status-high-bg text-status-high-text border border-status-high-text/30"
                     : "bg-status-approved-bg text-status-approved-text border border-status-approved-text/30"
                 }`}>
-                  {offer.badge || offer.type}
+                  {offer.type}
                 </span>
 
                 <span className="text-[10px] font-mono text-muted-foreground">
@@ -169,7 +169,7 @@ export default function MarketplacePreview() {
                   <span className="font-bold text-sm text-foreground">₹{offer.price}</span>
                   {offer.savings > 0 && (
                     <span className="text-[10px] text-muted-foreground line-through ml-1.5">
-                      ₹{offer.originalPrice}
+                      ₹{offer.mrp}
                     </span>
                   )}
                 </div>

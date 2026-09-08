@@ -54,10 +54,10 @@ function AnimatedNumber({ value }: { value: number }) {
 }
 
 const STATUS_STYLES: Record<CaseStatus, string> = {
-  Open: "bg-[#C8D9E6] text-[#2F4156]",
-  "Under Investigation": "bg-amber-100 text-amber-700",
-  Resolved: "bg-[#2F4156] text-white",
-  Escalated: "bg-red-100 text-red-700",
+  Open: "bg-sky-100 text-sky-800 dark:bg-[#C8D9E6] dark:text-[#2F4156] font-bold border border-sky-300 dark:border-transparent",
+  "Under Investigation": "bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-800/40",
+  Resolved: "bg-emerald-100 text-emerald-800 dark:bg-[#2F4156] dark:text-white font-bold border border-emerald-300 dark:border-transparent",
+  Escalated: "bg-rose-100 text-rose-800 dark:bg-rose-950/60 dark:text-rose-300 font-bold border border-rose-300 dark:border-rose-800/40",
 };
 
 export default function AdminModeration() {
@@ -150,10 +150,10 @@ export default function AdminModeration() {
               <button
                 key={s}
                 onClick={() => setStatusFilter(s)}
-                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors ${
+                className={`px-4 py-2 rounded-full text-xs font-mono transition-colors whitespace-nowrap ${
                   statusFilter === s
-                    ? "bg-[#2F4156] text-white"
-                    : "bg-transparent text-[#2F4156] border border-[#2F4156]/20 hover:bg-[#567C8D] hover:text-white"
+                    ? "bg-primary text-primary-foreground font-semibold shadow-sm"
+                    : "bg-card text-foreground border border-border hover:bg-secondary hover:text-foreground font-medium"
                 }`}
               >
                 {s}
@@ -187,8 +187,8 @@ export default function AdminModeration() {
                   <td className="py-3 pr-3 text-foreground font-medium">{c.subject}</td>
                   <td className="py-3 pr-3 text-muted-foreground">{c.reportedBy}</td>
                   <td className="py-3 pr-3 text-muted-foreground font-mono text-xs">{c.filedDate}</td>
-                  <td className="py-3 pr-3">
-                    <span className={`px-2.5 py-1 rounded-full text-xs font-mono ${STATUS_STYLES[c.status]}`}>
+                  <td className="py-3 pr-3 whitespace-nowrap">
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-mono whitespace-nowrap inline-flex items-center justify-center ${STATUS_STYLES[c.status]}`}>
                       {c.status}
                     </span>
                   </td>
@@ -268,7 +268,7 @@ export default function AdminModeration() {
               </button>
               <button
                 onClick={() => updateStatus(selected.id, "Under Investigation")}
-                className="w-full py-2.5 rounded-full border border-[#2F4156]/30 text-[#2F4156] text-sm font-medium hover:bg-[#C8D9E6]/30 active:scale-97 transition-colors"
+                className="w-full py-2.5 rounded-full border border-border text-foreground text-sm font-medium hover:bg-secondary active:scale-97 transition-colors"
               >
                 Mark Under Investigation
               </button>

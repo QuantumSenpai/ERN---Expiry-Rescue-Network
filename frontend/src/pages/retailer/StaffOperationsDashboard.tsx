@@ -1,5 +1,5 @@
-﻿import { useState, useMemo } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { Link } from "react-router-dom";
 import {
   Boxes,
   Clock,
@@ -28,8 +28,6 @@ import type { InventoryItem } from "@/types/inventory";
 import ProductDetailModal from "@/components/ProductDetailModal";
 
 export default function StaffOperationsDashboard() {
-  const navigate = useNavigate();
-
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -43,15 +41,15 @@ export default function StaffOperationsDashboard() {
   const [scannedBarcode, setScannedBarcode] = useState("");
   const [scanResult, setScanResult] = useState<InventoryItem | null>(null);
 
-  const [receiveForm, setReceiveForm] = useState({
+  const [receiveForm, setReceiveForm] = useState(() => ({
     productName: "Amul Taaza Homogenised Toned Milk 1L",
     sku: "MLK-AMUL-1L",
-    batchNo: `BATCH-${Math.floor(1000 + Math.random() * 9000)}`,
+    batchNo: `BATCH-${Date.now().toString().slice(-4)}`,
     quantity: "50",
     location: "Central Warehouse",
     expiryDate: "2026-08-25",
     supplier: "Gujarat Cooperative Milk Federation",
-  });
+  }));
 
   const [queueItems, setQueueItems] = useState([
     {
@@ -509,8 +507,8 @@ export default function StaffOperationsDashboard() {
 
                   <div className="flex items-center justify-end gap-3 shrink-0 font-mono">
                     <div className="text-right">
-                      <span className="font-bold text-foreground text-xs block uppercase">
-                        {item.daysRemaining}d left
+                      <span className="font-bold text-foreground text-xs block uppercase whitespace-nowrap">
+                        {item.daysRemaining}D LEFT
                       </span>
                       <span className="text-[10px] text-muted-foreground">
                         {item.expiryDate}

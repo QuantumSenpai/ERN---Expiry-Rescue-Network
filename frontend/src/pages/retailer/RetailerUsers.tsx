@@ -1,6 +1,5 @@
 import { useState, useMemo } from "react";
 import { Users, Plus, Store, Search, Pencil, Trash2, X, CheckCircle2, ToggleLeft } from "lucide-react";
-import AnimatedNumber from "@/components/AnimatedNumber";
 
 type StaffRole = "Business Owner" | "Store Manager" | "Inventory Manager" | "Sales Executive" | "Cashier Staff";
 type StaffStatus = "Active" | "Inactive";
@@ -303,8 +302,8 @@ export default function RetailerUsers() {
                   </td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">{member.phone}</td>
                   <td className="px-4 py-3 font-mono text-muted-foreground">{member.lastLogin}</td>
-                  <td className="px-4 py-3">
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${member.status === "Active" ? "bg-emerald-500/15 text-emerald-600" : "bg-secondary text-muted-foreground"}`}>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap inline-flex items-center justify-center ${member.status === "Active" ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400" : "bg-secondary text-muted-foreground"}`}>
                       {member.status}
                     </span>
                   </td>

@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   Users,
   Package,
@@ -65,7 +65,7 @@ const ACTIVITIES: ActivityItem[] = [
     title: "Bulk Inventory Import completed",
     description: "348 products imported to Store A",
     time: "15 min ago",
-    link: "/retailer/inventory",
+    link: "/admin/inventory",
     icon: CloudUpload,
     iconBg: "bg-[#2F4156]",
     iconColor: "text-primary-foreground",
@@ -98,7 +98,7 @@ const ACTIVITIES: ActivityItem[] = [
     title: "Expiry Alert: 12 items flagged",
     description: "Batches reaching critical threshold in Bay 4",
     time: "3 hours ago",
-    link: "/retailer/expiry-intelligence",
+    link: "/admin/expiry",
     icon: Clock,
     iconBg: "bg-destructive",
     iconColor: "text-primary-foreground",
@@ -117,11 +117,11 @@ const ACTIVITIES: ActivityItem[] = [
 ];
 
 const KPI_ROUTES = {
-  totalProducts: "/retailer/inventory",
+  totalProducts: "/admin/inventory",
   activeUsers: "/admin/users",
   locations: "/admin/locations",
-  expiryTracked: "/retailer/expiry-intelligence",
-  needsAttention: "/retailer/inventory",
+  expiryTracked: "/admin/expiry",
+  needsAttention: "/admin/inventory?filter=critical",
 };
 
 export default function AdminDashboard() {
@@ -306,7 +306,7 @@ export default function AdminDashboard() {
 
         <div className="flex items-center gap-2.5 flex-wrap text-xs font-mono">
           <button
-            onClick={() => navigate("/retailer/inventory")}
+            onClick={() => navigate("/admin/inventory?filter=critical")}
             className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover shadow-none"
           >
             <span className="size-2 rounded-full bg-accent animate-pulse" />
@@ -314,7 +314,7 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => navigate("/retailer/expiry-intelligence")}
+            onClick={() => navigate("/admin/expiry")}
             className="px-3.5 py-1.5 rounded-full bg-destructive text-destructive-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover--critical shadow-none"
           >
             <span className="size-2 rounded-full bg-card" />
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
           </button>
 
           <button
-            onClick={() => navigate("/retailer/inventory")}
+            onClick={() => navigate("/admin/inventory?filter=low-stock")}
             className="px-3.5 py-1.5 rounded-full bg-secondary hover:bg-secondary/80 dark:hover:bg-[#b8ccdc] text-foreground font-bold flex items-center gap-2 cursor-pointer ern-shimmer-hover shadow-none"
           >
             <span>9 low-stock items</span>
@@ -803,7 +803,7 @@ export default function AdminDashboard() {
 
               <button
                 type="button"
-                onClick={() => navigate("/retailer/inventory")}
+                onClick={() => navigate("/admin/inventory")}
                 className="p-4 rounded-xl bg-secondary/60 hover:bg-secondary/60 dark:hover:bg-[#567C8D] flex flex-col items-center justify-center text-center cursor-pointer shadow-none ern-btn-hover"
               >
                 <Sliders className="size-5 text-foreground dark:text-accent" />
@@ -897,7 +897,7 @@ export default function AdminDashboard() {
         isOpen={healthModalOpen}
         onClose={() => setHealthModalOpen(false)}
         onFilterSelect={(filter) => {
-          navigate(`/retailer/inventory?filter=${filter}`);
+          navigate(`/admin/inventory?filter=${filter}`);
         }}
       />
 

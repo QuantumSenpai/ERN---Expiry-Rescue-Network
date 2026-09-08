@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   User,
@@ -27,6 +27,26 @@ import AnimatedNumber from "@/components/AnimatedNumber";
 
 type ActiveTab = "all" | "personal" | "security" | "preferences" | "journey";
 
+export interface NotificationPreferences {
+  orderUpdatesEmail: boolean;
+  orderUpdatesSms: boolean;
+  orderUpdatesWhatsapp: boolean;
+  rescueAlertsEmail: boolean;
+  rescueAlertsWhatsapp: boolean;
+  promoOffersEmail: boolean;
+}
+
+const DEFAULT_NOTIFICATIONS: NotificationPreferences = {
+  orderUpdatesEmail: true,
+  orderUpdatesSms: true,
+  orderUpdatesWhatsapp: true,
+  rescueAlertsEmail: true,
+  rescueAlertsWhatsapp: false,
+  promoOffersEmail: false,
+};
+
+const STORAGE_KEY = "ern_customer_notification_preferences";
+
 export default function Profile() {
   const { user, logout } = useAuth();
   const {
@@ -40,6 +60,29 @@ export default function Profile() {
 
   const [activeTab, setActiveTab] = useState<ActiveTab>("all");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  const [notifications, setNotifications] = useState<NotificationPreferences>(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return { ...DEFAULT_NOTIFICATIONS, ...JSON.parse(saved) };
+    } catch (e) {
+      // fallback
+    }
+    return DEFAULT_NOTIFICATIONS;
+  });
+
+  const toggleNotification = (key: keyof NotificationPreferences) => {
+    setNotifications((prev) => {
+      const updated = { ...prev, [key]: !prev[key] };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+      } catch (e) {
+        // ignore
+      }
+      showToast("Notification preference updated and saved.");
+      return updated;
+    });
+  };
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -177,6 +220,7 @@ export default function Profile() {
             { label: "All Settings", value: "all" },
             { label: "Personal Information", value: "personal" },
             { label: "Delivery Addresses", value: "journey" },
+            { label: "Notification Preferences", value: "preferences" },
             { label: "Security & Passwords", value: "security" },
           ].map((tab) => (
             <button
@@ -196,118 +240,237 @@ export default function Profile() {
         {/* Main Content Grid */}
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Personal Info Card */}
-          <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="font-display text-xl font-[350] text-foreground">Personal Credentials</h2>
-              <button
-                onClick={() => setIsEditingInfo(!isEditingInfo)}
-                className="px-3.5 py-1.5 rounded-full bg-card hover:bg-[#c4c7c4]/40 text-foreground font-medium uppercase cursor-pointer"
-              >
-                {isEditingInfo ? "Cancel" : "Edit Details"}
-              </button>
-            </div>
-
-            {isEditingInfo ? (
-              <form onSubmit={handleSaveInfo} className="space-y-3">
-                <div>
-                  <label className="text-muted-foreground uppercase font-medium block mb-1">Full Name</label>
-                  <input
-                    type="text"
-                    value={tempInfo.fullName}
-                    onChange={(e) => setTempInfo({ ...tempInfo, fullName: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-sans text-xs outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-muted-foreground uppercase font-medium block mb-1">Email</label>
-                  <input
-                    type="email"
-                    value={tempInfo.email}
-                    onChange={(e) => setTempInfo({ ...tempInfo, email: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-mono text-xs outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="text-muted-foreground uppercase font-medium block mb-1">Phone Number</label>
-                  <input
-                    type="tel"
-                    value={tempInfo.phone}
-                    onChange={(e) => setTempInfo({ ...tempInfo, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-mono text-xs outline-none"
-                  />
-                </div>
-                <div className="flex justify-end pt-2">
-                  <button
-                    type="submit"
-                    className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium uppercase hover:bg-[#567C8D] cursor-pointer shadow-none"
-                  >
-                    Save Changes
-                  </button>
-                </div>
-              </form>
-            ) : (
-              <div className="space-y-3">
-                <div className="p-3.5 rounded-xl bg-card">
-                  <span className="text-muted-foreground uppercase text-[10px] block">Full Name</span>
-                  <p className="font-[350] text-foreground text-sm font-display mt-0.5">{personalInfo.fullName}</p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-card">
-                  <span className="text-muted-foreground uppercase text-[10px] block">Email Address</span>
-                  <p className="font-medium text-foreground mt-0.5">{personalInfo.email}</p>
-                </div>
-                <div className="p-3.5 rounded-xl bg-card">
-                  <span className="text-muted-foreground uppercase text-[10px] block">Phone Contact</span>
-                  <p className="font-medium text-foreground mt-0.5">{personalInfo.phone}</p>
-                </div>
+          {(activeTab === "all" || activeTab === "personal") && (
+            <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <h2 className="font-display text-xl font-[350] text-foreground">Personal Credentials</h2>
+                <button
+                  onClick={() => setIsEditingInfo(!isEditingInfo)}
+                  className="px-3.5 py-1.5 rounded-full bg-card hover:bg-[#c4c7c4]/40 text-foreground font-medium uppercase cursor-pointer"
+                >
+                  {isEditingInfo ? "Cancel" : "Edit Details"}
+                </button>
               </div>
-            )}
-          </div>
 
-          {/* Delivery Addresses */}
-          <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
-            <div className="flex items-center justify-between pb-3 border-b border-border">
-              <h2 className="font-display text-xl font-[350] text-foreground">Delivery Locations</h2>
-              <button
-                onClick={handleOpenAddAddress}
-                className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground font-medium uppercase hover:bg-[#567C8D] cursor-pointer shadow-none flex items-center gap-1"
-              >
-                <Plus className="size-3.5" />
-                <span>Add Address</span>
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              {addresses.length === 0 ? (
-                <p className="text-muted-foreground py-4 text-center">No addresses saved yet.</p>
-              ) : (
-                addresses.map((addr) => (
-                  <div key={addr.id} className="p-4 rounded-xl bg-card flex items-start justify-between gap-3">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium text-foreground uppercase">{addr.type}</span>
-                        {addr.isDefault && (
-                          <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium uppercase">
-                            Default
-                          </span>
-                        )}
-                      </div>
-                      <p className="text-foreground font-body text-xs mt-1">{addr.addressLine1}, {addr.city} {addr.pincode}</p>
-                      <p className="text-muted-foreground text-[11px] mt-0.5">Contact: {addr.phone}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => removeAddress(addr.id)}
-                        className="p-2 rounded-full bg-background hover:bg-[#c4c7c4]/40 text-foreground cursor-pointer transition-colors"
-                      >
-                        <Trash2 className="size-3.5" />
-                      </button>
-                    </div>
+              {isEditingInfo ? (
+                <form onSubmit={handleSaveInfo} className="space-y-3">
+                  <div>
+                    <label className="text-muted-foreground uppercase font-medium block mb-1">Full Name</label>
+                    <input
+                      type="text"
+                      value={tempInfo.fullName}
+                      onChange={(e) => setTempInfo({ ...tempInfo, fullName: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-sans text-xs outline-none"
+                    />
                   </div>
-                ))
+                  <div>
+                    <label className="text-muted-foreground uppercase font-medium block mb-1">Email</label>
+                    <input
+                      type="email"
+                      value={tempInfo.email}
+                      onChange={(e) => setTempInfo({ ...tempInfo, email: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-mono text-xs outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-muted-foreground uppercase font-medium block mb-1">Phone Number</label>
+                    <input
+                      type="tel"
+                      value={tempInfo.phone}
+                      onChange={(e) => setTempInfo({ ...tempInfo, phone: e.target.value })}
+                      className="w-full px-3.5 py-2.5 rounded-lg bg-card border border-transparent focus:border-primary text-foreground font-mono text-xs outline-none"
+                    />
+                  </div>
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="submit"
+                      className="px-5 py-2.5 rounded-full bg-primary text-primary-foreground font-medium uppercase hover:bg-[#567C8D] cursor-pointer shadow-none"
+                    >
+                      Save Changes
+                    </button>
+                  </div>
+                </form>
+              ) : (
+                <div className="space-y-3">
+                  <div className="p-3.5 rounded-xl bg-card">
+                    <span className="text-muted-foreground uppercase text-[10px] block">Full Name</span>
+                    <p className="font-[350] text-foreground text-sm font-display mt-0.5">{personalInfo.fullName}</p>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-card">
+                    <span className="text-muted-foreground uppercase text-[10px] block">Email Address</span>
+                    <p className="font-medium text-foreground mt-0.5">{personalInfo.email}</p>
+                  </div>
+                  <div className="p-3.5 rounded-xl bg-card">
+                    <span className="text-muted-foreground uppercase text-[10px] block">Phone Contact</span>
+                    <p className="font-medium text-foreground mt-0.5">{personalInfo.phone}</p>
+                  </div>
+                </div>
               )}
             </div>
-          </div>
+          )}
+
+          {/* Delivery Addresses */}
+          {(activeTab === "all" || activeTab === "journey") && (
+            <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <h2 className="font-display text-xl font-[350] text-foreground">Delivery Locations</h2>
+                <button
+                  onClick={handleOpenAddAddress}
+                  className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground font-medium uppercase hover:bg-[#567C8D] cursor-pointer shadow-none flex items-center gap-1"
+                >
+                  <Plus className="size-3.5" />
+                  <span>Add Address</span>
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                {addresses.length === 0 ? (
+                  <p className="text-muted-foreground py-4 text-center">No addresses saved yet.</p>
+                ) : (
+                  addresses.map((addr) => (
+                    <div key={addr.id} className="p-4 rounded-xl bg-card flex items-start justify-between gap-3">
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-foreground uppercase">{addr.type}</span>
+                          {addr.isDefault && (
+                            <span className="px-2 py-0.5 rounded-full bg-primary text-primary-foreground text-[10px] font-medium uppercase">
+                              Default
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-foreground font-body text-xs mt-1">{addr.addressLine1}, {addr.city} {addr.pincode}</p>
+                        <p className="text-muted-foreground text-[11px] mt-0.5">Contact: {addr.phone}</p>
+                      </div>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => removeAddress(addr.id)}
+                          className="p-2 rounded-full bg-background hover:bg-[#c4c7c4]/40 text-foreground cursor-pointer transition-colors"
+                        >
+                          <Trash2 className="size-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Notification Preferences Card (CRIT-09) */}
+          {(activeTab === "all" || activeTab === "preferences") && (
+            <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <BellRing className="size-4 text-primary" />
+                  <h2 className="font-display text-xl font-[350] text-foreground">Notification Preferences</h2>
+                </div>
+                <span className="text-[10px] text-muted-foreground uppercase">Synced Locally</span>
+              </div>
+
+              <div className="space-y-3 font-sans">
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Order Updates via Email</p>
+                    <p className="text-muted-foreground text-[11px]">Real-time rescue tracking receipts and order changes</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.orderUpdatesEmail}
+                    onChange={() => toggleNotification("orderUpdatesEmail")}
+                    className="size-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Order Updates via SMS</p>
+                    <p className="text-muted-foreground text-[11px]">Dispatch OTPs and immediate delivery alerts</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.orderUpdatesSms}
+                    onChange={() => toggleNotification("orderUpdatesSms")}
+                    className="size-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">WhatsApp Live Delivery Pass</p>
+                    <p className="text-muted-foreground text-[11px]">Instant live map link and verified digital invoice</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.orderUpdatesWhatsapp}
+                    onChange={() => toggleNotification("orderUpdatesWhatsapp")}
+                    className="size-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Flash Rescue Expiry Alerts</p>
+                    <p className="text-muted-foreground text-[11px]">Notify when items near you reach &gt;60% clearance discounts</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.rescueAlertsEmail}
+                    onChange={() => toggleNotification("rescueAlertsEmail")}
+                    className="size-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">WhatsApp Perishable Deals</p>
+                    <p className="text-muted-foreground text-[11px]">Daily 8 PM anti-waste discount digest</p>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={notifications.rescueAlertsWhatsapp}
+                    onChange={() => toggleNotification("rescueAlertsWhatsapp")}
+                    className="size-4 rounded accent-primary cursor-pointer"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Security Card */}
+          {(activeTab === "all" || activeTab === "security") && (
+            <div className="bg-card border border-border rounded-2xl sm:rounded-[32px] p-6 shadow-none font-mono text-xs space-y-4">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="size-4 text-emerald-500" />
+                  <h2 className="font-display text-xl font-[350] text-foreground">Security & Password</h2>
+                </div>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-500 text-[10px] font-medium uppercase">
+                  Protected
+                </span>
+              </div>
+
+              <div className="space-y-3 font-sans">
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Two-Factor Authentication (2FA)</p>
+                    <p className="text-muted-foreground text-[11px]">SMS and Authenticator app verification on sign in</p>
+                  </div>
+                  <span className="px-2.5 py-1 rounded-full bg-secondary text-foreground text-[11px] font-mono font-medium">
+                    Active
+                  </span>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-card border border-border/50 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-foreground text-xs">Active Web Session</p>
+                    <p className="text-muted-foreground text-[11px]">Signed in via Secure ERN Session Token</p>
+                  </div>
+                  <span className="text-[11px] font-mono text-emerald-500 font-bold">This Device</span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

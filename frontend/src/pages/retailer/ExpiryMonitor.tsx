@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   AlertTriangle,
@@ -209,8 +209,8 @@ function FefoPlanModal({
                   <td className="px-3 py-3.5 font-bold text-foreground">{item.batchNo}</td>
                   <td className="px-3 py-3.5 text-muted-foreground">{item.location}</td>
                   <td className="px-3 py-3.5 text-foreground">{item.expiryDate}</td>
-                  <td className="px-3 py-3.5 text-center font-bold text-foreground">
-                    {item.daysLeft}d left
+                  <td className="px-3 py-3.5 text-center font-bold text-foreground whitespace-nowrap">
+                    {item.daysLeft}D LEFT
                   </td>
                   <td className="px-3 py-3.5 font-bold text-foreground text-right">
                     {item.quantity} {item.unit}
@@ -347,7 +347,7 @@ function ClearanceCreationModal({
               >
                 {EXPIRY_RISK_ITEMS.map((item) => (
                   <option key={item.id} value={item.id}>
-                    {item.name} · {item.batchNo} · {item.location} ({item.daysLeft}d left)
+                    {item.name} · {item.batchNo} · {item.location} ({item.daysLeft}D LEFT)
                   </option>
                 ))}
               </select>
@@ -924,7 +924,7 @@ export default function ExpiryMonitor() {
                   <td className="px-4 py-3.5 text-foreground">{item.expiryDate}</td>
                   <td className="px-4 py-3.5 text-center">
                     <span
-                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                      className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center gap-1 ${
                         item.daysLeft <= 3
                           ? "bg-primary text-primary-foreground"
                           : item.daysLeft <= 7
@@ -932,7 +932,7 @@ export default function ExpiryMonitor() {
                           : "bg-primary text-primary-foreground"
                       }`}
                     >
-                      {item.daysLeft}d left
+                      {item.daysLeft}D LEFT
                     </span>
                   </td>
                   <td className="px-4 py-3.5 text-right font-bold text-foreground">

@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Package,
   Plus,
@@ -296,7 +296,7 @@ export default function RetailerProducts() {
                 <th className="px-4 py-3">SKU & Barcode</th>
                 <th className="px-4 py-3">Category</th>
                 <th className="px-4 py-3 text-center">Expiry Tracking</th>
-                <th className="px-4 py-3">Stock Status</th>
+                <th className="px-4 py-3 whitespace-nowrap">Stock Status</th>
                 <th className="px-4 py-3">Stock Quantity</th>
                 <th className="px-4 py-3">Unit Price</th>
                 <th className="px-4 py-3 text-center">Batches</th>
@@ -356,9 +356,9 @@ export default function RetailerProducts() {
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-semibold ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap inline-flex items-center justify-center ${
                           STOCK_STATUS_STYLE[p.stockStatus]
                         }`}
                       >

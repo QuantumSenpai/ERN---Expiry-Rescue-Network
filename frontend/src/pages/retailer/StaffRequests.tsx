@@ -1,4 +1,4 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Inbox,
   CheckCircle2,
@@ -203,10 +203,10 @@ const PRIORITY_FILTERS: Priority[] = ["Low", "Normal", "High", "Critical"];
 
 const LOCATION_FILTERS = [
   "All Locations",
-  "Central Warehouse",
-  "Store A",
-  "Store B",
-  "Distribution Center",
+  "Main Branch",
+  "City Center",
+  "North Outlet",
+  "East Wing Express",
 ];
 
 const STATUS_TABS: { label: string; value: RequestStatus | "All" }[] = [
@@ -260,6 +260,13 @@ export default function StaffRequests() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+
+  // Controlled form state for create request modal
+  const [newReqType, setNewReqType] = useState<RequestType>("Stock Adjustment");
+  const [newReqProduct, setNewReqProduct] = useState("Amul Taaza Milk 1L");
+  const [newReqQuantity, setNewReqQuantity] = useState("25");
+  const [newReqPriority, setNewReqPriority] = useState<Priority>("Normal");
+  const [newReqReason, setNewReqReason] = useState("");
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -458,13 +465,13 @@ export default function StaffRequests() {
                   </td>
                   <td className="px-4 py-3.5 text-muted-foreground">{r.location}</td>
                   <td className="px-4 py-3.5 text-right font-bold text-foreground">{r.quantity} {r.unit}</td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${priorityBadgeClasses(r.priority)}`}>
+                  <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${priorityBadgeClasses(r.priority)}`}>
                       {r.priority}
                     </span>
                   </td>
-                  <td className="px-4 py-3.5 text-center">
-                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${statusBadgeClasses(r.status)}`}>
+                  <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${statusBadgeClasses(r.status)}`}>
                       {r.status}
                     </span>
                   </td>
@@ -563,11 +570,43 @@ export default function StaffRequests() {
             </div>
 
             <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Request Type</label>
+                  <select
+                    value={newReqType}
+                    onChange={(e) => setNewReqType(e.target.value as RequestType)}
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none"
+                  >
+                    <option value="Stock Adjustment">Stock Adjustment</option>
+                    <option value="Clearance">Clearance</option>
+                    <option value="Transfer">Transfer</option>
+                    <option value="Rescue">Rescue</option>
+                    <option value="Write-off">Write-off</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Priority</label>
+                  <select
+                    value={newReqPriority}
+                    onChange={(e) => setNewReqPriority(e.target.value as Priority)}
+                    className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none"
+                  >
+                    <option value="Low">Low</option>
+                    <option value="Normal">Normal</option>
+                    <option value="High">High</option>
+                    <option value="Critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
               <div>
-                <label className="text-muted-foreground uppercase font-bold block mb-1">Product</label>
+                <label className="text-muted-foreground uppercase font-bold block mb-1">Product Name</label>
                 <input
                   type="text"
-                  defaultValue="Amul Taaza Milk 1L"
+                  value={newReqProduct}
+                  onChange={(e) => setNewReqProduct(e.target.value)}
+                  placeholder="e.g. Amul Taaza Milk 1L"
                   className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-sans text-xs outline-none"
                 />
               </div>
@@ -577,18 +616,32 @@ export default function StaffRequests() {
                   <label className="text-muted-foreground uppercase font-bold block mb-1">Quantity</label>
                   <input
                     type="number"
-                    defaultValue="25"
+                    min="1"
+                    value={newReqQuantity}
+                    onChange={(e) => setNewReqQuantity(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none"
                   />
                 </div>
                 <div>
-                  <label className="text-muted-foreground uppercase font-bold block mb-1">Priority</label>
-                  <select className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-mono text-xs outline-none">
-                    <option>Normal</option>
-                    <option>High</option>
-                    <option>Critical</option>
-                  </select>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Location</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={locationFilter !== "All Locations" ? locationFilter : "Central Warehouse"}
+                    className="w-full px-3 py-2 rounded-lg bg-background/50 border border-border text-muted-foreground font-sans text-xs outline-none cursor-not-allowed"
+                  />
                 </div>
+              </div>
+
+              <div>
+                <label className="text-muted-foreground uppercase font-bold block mb-1">Reason / Notes</label>
+                <input
+                  type="text"
+                  value={newReqReason}
+                  onChange={(e) => setNewReqReason(e.target.value)}
+                  placeholder="e.g. Batch approaching critical threshold"
+                  className="w-full px-3 py-2 rounded-lg bg-background border border-border text-foreground font-sans text-xs outline-none"
+                />
               </div>
             </div>
 
@@ -603,31 +656,37 @@ export default function StaffRequests() {
               <button
                 type="button"
                 onClick={() => {
+                  const qty = Math.max(1, parseInt(newReqQuantity, 10) || 1);
+                  const productName = newReqProduct.trim() || "Generic Product";
+                  const skuPrefix = productName.replace(/[^a-zA-Z]/g, "").slice(0, 3).toUpperCase() || "ITM";
                   const newReq: StaffRequest = {
                     id: `REQ-2026-${Math.floor(1000 + Math.random() * 9000)}`,
-                    type: "Stock Adjustment",
-                    product: "Amul Taaza Milk 1L",
-                    sku: "MLK-AMUL-1L",
-                    batch: "MILK-0042",
-                    quantity: 25,
+                    type: newReqType,
+                    product: productName,
+                    sku: `${skuPrefix}-${Math.floor(100 + Math.random() * 900)}`,
+                    batch: `BAT-${Math.floor(1000 + Math.random() * 9000)}`,
+                    quantity: qty,
                     unit: "Pcs",
-                    currentStock: 45,
-                    stockValue: 1050,
-                    expiry: "18 Aug 2026",
-                    daysLeft: 2,
-                    requestedBy: "Operations Staff (You)",
-                    department: "Warehouse",
-                    location: "Central Warehouse",
-                    date: "15 Aug 2026",
-                    dueDate: "18 Aug 2026",
-                    priority: "Normal",
+                    currentStock: qty,
+                    stockValue: qty * 45,
+                    expiry: new Date(Date.now() + 7 * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+                    daysLeft: 7,
+                    requestedBy: user?.name ? `${user.name} (You)` : "Operations Staff (You)",
+                    department: "Store Operations",
+                    location: locationFilter !== "All Locations" ? locationFilter : "Central Warehouse",
+                    date: new Date().toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+                    dueDate: new Date(Date.now() + 2 * 86400000).toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" }),
+                    priority: newReqPriority,
                     status: "Pending",
-                    reason: "Inbound adjustment request.",
+                    reason: newReqReason.trim() || `${newReqType} request initiated.`,
                     isMyRequest: true,
                     history: [{ id: `h-${Date.now()}`, time: "Just now", action: "Created" }],
                   };
                   setRequests((prev) => [newReq, ...prev]);
                   setCreateOpen(false);
+                  setNewReqProduct("Amul Taaza Milk 1L");
+                  setNewReqQuantity("25");
+                  setNewReqReason("");
                   showToast(`Request ${newReq.id} created.`);
                 }}
                 className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none active:scale-95"

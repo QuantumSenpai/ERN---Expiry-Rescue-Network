@@ -1,107 +1,23 @@
-import { useState, useMemo } from "react";
-import { Link } from "react-router-dom";
+import { useState, useMemo, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import {
   Plus,
   Search,
   ChevronLeft,
   ChevronRight,
-  Boxes,
-  Clock,
-  ShieldCheck,
-  AlertTriangle,
-  MapPin,
   CheckCircle2,
-  Percent,
   ChevronDown,
   SlidersHorizontal,
   ArrowRightLeft,
-  Upload,
   Barcode,
-  CheckSquare,
-  Square,
   X,
   Package,
-  ExternalLink,
 } from "lucide-react";
-import { MASTER_INVENTORY } from "@/data/mockInventory";
-import type { InventoryItem, StockStatus, ExpiryStatus } from "@/types/inventory";
+import { useLiveInventory } from "@/lib/inventoryStore";
+import type { InventoryItem, ExpiryStatus } from "@/types/inventory";
 import ProductDetailModal from "@/components/ProductDetailModal";
 
 const PAGE_SIZE = 8;
-
-const RECONCILED_INVENTORY: InventoryItem[] = [
-  ...MASTER_INVENTORY.map((item, idx) => {
-    const facilities = ["Central Warehouse", "Store A", "Store B", "Distribution Center"];
-    const loc = facilities[idx % facilities.length];
-    return {
-      ...item,
-      id: String(item.id),
-      store: loc,
-      expiryStatus: (item.expiryStatus || "Not Applicable") as ExpiryStatus,
-    };
-  }),
-  {
-    id: "inv-extra-1",
-    productId: "prod-13",
-    name: "CleanWave Industrial Floor Detergent 5L",
-    sku: "DET-IND-5L",
-    barcode: "8901234567890",
-    category: "Hygiene",
-    brand: "CleanPro",
-    store: "Central Warehouse",
-    quantity: 180,
-    minStockLevel: 40,
-    unit: "Pcs",
-    unitPrice: 450,
-    stockValue: 81000,
-    stockStatus: "In Stock",
-    expiryTrackingEnabled: false,
-    expiryStatus: "Not Applicable",
-    aisleLocation: "Rack D-12",
-  },
-  {
-    id: "inv-extra-2",
-    productId: "prod-14",
-    name: "Royal Basmati Rice 10kg Premium",
-    sku: "RICE-ROY-10KG",
-    barcode: "8902345678901",
-    category: "Grains & Staples",
-    brand: "Metro Foods",
-    store: "Store B",
-    quantity: 12,
-    minStockLevel: 25,
-    unit: "Bags",
-    unitPrice: 890,
-    stockValue: 10680,
-    stockStatus: "Low Stock",
-    expiryTrackingEnabled: false,
-    expiryStatus: "Not Applicable",
-    aisleLocation: "Aisle 6, Grain Bay",
-  },
-  {
-    id: "inv-extra-3",
-    productId: "prod-15",
-    name: "FarmFresh Pasteurized Paneer 200g",
-    sku: "PNR-FF-200G",
-    barcode: "8903456789012",
-    category: "Dairy",
-    brand: "Amul",
-    store: "Store A",
-    quantity: 35,
-    minStockLevel: 20,
-    unit: "Pcs",
-    unitPrice: 95,
-    stockValue: 3325,
-    stockStatus: "In Stock",
-    expiryTrackingEnabled: true,
-    batchNo: "PNR-882",
-    mfgDate: "08 Aug 2026",
-    expiryDate: "18 Aug 2026",
-    daysRemaining: 3,
-    expiryStatus: "Critical",
-    aisleLocation: "Chiller Bay 2",
-  },
-];
 
 function getStockSplit(item: InventoryItem) {
   const reserved = Math.round(item.quantity * 0.15);
@@ -120,41 +36,116 @@ type InventoryFilterTab =
   | "expiring-soon"
   | "critical";
 
-const STOCK_STATUS_STYLE: Record<StockStatus, string> = {
-  "In Stock": "bg-primary text-primary-foreground font-bold",
-  "Low Stock": "bg-primary text-primary-foreground border border-[#2F4156] font-bold",
-  "Out of Stock": "bg-primary text-primary-foreground font-bold",
+const STOCK_STATUS_STYLE: Record<string, string> = {
+  "In Stock": "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold",
+  "Low Stock": "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold",
+  "Out of Stock": "bg-destructive/15 text-destructive dark:text-rose-300 border border-destructive/30 font-bold",
+  "Reserved": "bg-blue-500/15 text-blue-700 dark:text-blue-300 border border-blue-500/30 font-bold",
+  "In Transit": "bg-purple-500/15 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-bold",
+};
+
+const getStockBadgeStyle = (status: string) => {
+  return (
+    STOCK_STATUS_STYLE[status] ||
+    "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold"
+  );
 };
 
 const EXPIRY_STATUS_STYLE: Record<ExpiryStatus, string> = {
-  Safe: "bg-primary text-primary-foreground font-bold",
-  Warning: "bg-primary text-primary-foreground border border-[#2F4156] font-bold",
-  "High Risk": "bg-primary text-primary-foreground border border-[#2F4156] font-bold",
-  Critical: "bg-primary text-primary-foreground font-bold",
-  Expired: "bg-pewter text-primary-foreground font-bold",
-  "Not Applicable": "bg-card text-muted-foreground font-medium",
+  Safe: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 font-bold",
+  Warning: "bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30 font-bold",
+  "High Risk": "bg-orange-500/15 text-orange-700 dark:text-orange-300 border border-orange-500/30 font-bold",
+  Critical: "bg-destructive/15 text-destructive dark:text-rose-300 border border-destructive/30 font-bold",
+  Expired: "bg-muted text-muted-foreground font-bold",
+  "Not Applicable": "bg-card text-muted-foreground font-medium border border-border",
 };
 
 const AVAILABLE_LOCATIONS = [
   "All Locations",
-  "Central Warehouse",
-  "Store A",
-  "Store B",
-  "Distribution Center",
+  "Main Branch",
+  "City Center",
+  "North Outlet",
+  "East Wing Express",
 ];
 
 export default function RetailerInventory() {
-  const [items, setItems] = useState<InventoryItem[]>(RECONCILED_INVENTORY);
-  const [activeTab, setActiveTab] = useState<InventoryFilterTab>("all");
+  const location = useLocation();
+  const { inventory: items, addStock, adjustStock, transferStock } = useLiveInventory();
+  const [activeTab, setActiveTab] = useState<InventoryFilterTab>(() => {
+    const params = new URLSearchParams(location.search);
+    const f = params.get("filter");
+    if (
+      f &&
+      [
+        "all",
+        "expiry-tracked",
+        "non-expiry",
+        "in-stock",
+        "low-stock",
+        "out-of-stock",
+        "expiring-soon",
+        "critical",
+      ].includes(f)
+    ) {
+      return f as InventoryFilterTab;
+    }
+    return "all";
+  });
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const f = params.get("filter");
+    if (
+      f &&
+      [
+        "all",
+        "critical",
+        "low-stock",
+        "healthy",
+        "dairy",
+        "bakery",
+        "meat",
+        "produce",
+      ].includes(f)
+    ) {
+      queueMicrotask(() => {
+        setActiveTab(f as InventoryFilterTab);
+      });
+    }
+  }, [location.search]);
+
   const [search, setSearch] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("All Locations");
   const [page, setPage] = useState(1);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Add Stock modal form state
+  // Add Stock Count Modal state
   const [addStockProductId, setAddStockProductId] = useState<string>("");
+  const [addStockLocation, setAddStockLocation] = useState<string>("Main Branch");
+  const [addStockBatch, setAddStockBatch] = useState<string>("");
   const [addStockQty, setAddStockQty] = useState<number>(50);
+  const [addStockExpiry, setAddStockExpiry] = useState<string>(() =>
+    new Date(Date.now() + 20 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]
+  );
+  const [addStockCost, setAddStockCost] = useState<string>("");
+  const [addStockError, setAddStockError] = useState<string>("");
+
+  // Adjust Stock Modal state
+  const [adjustProductId, setAdjustProductId] = useState<string>("");
+  const [adjustLocation, setAdjustLocation] = useState<string>("Main Branch");
+  const [adjustType, setAdjustType] = useState<"Add" | "Remove" | "Correction">("Add");
+  const [adjustQty, setAdjustQty] = useState<number>(10);
+  const [adjustReason, setAdjustReason] = useState<string>("Physical audit count");
+  const [adjustError, setAdjustError] = useState<string>("");
+
+  // Transfer Stock Modal state
+  const [transferSource, setTransferSource] = useState<string>("Main Branch");
+  const [transferDest, setTransferDest] = useState<string>("City Center");
+  const [transferProductId, setTransferProductId] = useState<string>("");
+  const [transferQty, setTransferQty] = useState<number>(10);
+  const [transferError, setTransferError] = useState<string>("");
+
   // Barcode scan state
   const [barcodeInput, setBarcodeInput] = useState("8901030700032");
 
@@ -162,7 +153,6 @@ export default function RetailerInventory() {
   const [isAdjustStockOpen, setIsAdjustStockOpen] = useState(false);
   const [isTransferStockOpen, setIsTransferStockOpen] = useState(false);
   const [isBarcodeScanOpen, setIsBarcodeScanOpen] = useState(false);
-  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
   const [detailItem, setDetailItem] = useState<InventoryItem | null>(null);
 
@@ -185,7 +175,8 @@ export default function RetailerInventory() {
 
       const matchesLoc =
         selectedLocation === "All Locations" ||
-        item.store === selectedLocation;
+        item.store.toLowerCase().includes(selectedLocation.toLowerCase()) ||
+        selectedLocation.toLowerCase().includes(item.store.toLowerCase());
 
       let matchesTab = true;
       if (activeTab === "expiry-tracked") matchesTab = item.expiryTrackingEnabled;
@@ -231,22 +222,119 @@ export default function RetailerInventory() {
   const criticalCount = items.filter((i) => i.expiryStatus === "Critical").length;
 
   const handleCommitStock = () => {
+    setAddStockError("");
     const targetId = addStockProductId || (items[0]?.id ?? "");
-    setItems((prev) =>
-      prev.map((item) =>
-        String(item.id) === String(targetId)
-          ? {
-              ...item,
-              quantity: item.quantity + addStockQty,
-              stockValue: (item.quantity + addStockQty) * item.unitPrice,
-              stockStatus: "In Stock" as const,
-            }
-          : item
-      )
-    );
+    const target = items.find((i) => String(i.id) === String(targetId) || i.productId === targetId);
+    if (!target) {
+      setAddStockError("Please select a valid product.");
+      return;
+    }
+    if (addStockQty <= 0) {
+      setAddStockError("Quantity must be greater than 0.");
+      return;
+    }
+    if (target.expiryTrackingEnabled && !addStockBatch.trim()) {
+      setAddStockError("Batch number is required for expiry-tracked items.");
+      return;
+    }
+
+    addStock({
+      store: addStockLocation,
+      productId: String(target.productId || target.id),
+      name: target.name,
+      brand: target.brand,
+      category: target.category,
+      quantity: addStockQty,
+      batchNo: addStockBatch.trim() || undefined,
+      expiryDate: target.expiryTrackingEnabled ? addStockExpiry : undefined,
+      unitPrice: addStockCost ? parseFloat(addStockCost) : target.unitPrice,
+      unit: target.unit,
+    });
+
     setIsAddStockOpen(false);
-    showToast(`Stock updated: +${addStockQty} units added.`);
+    showToast(`Stock updated: +${addStockQty} units added to ${addStockLocation}.`);
     setAddStockQty(50);
+    setAddStockBatch("");
+    setAddStockError("");
+  };
+
+  const handleAdjustStock = () => {
+    setAdjustError("");
+    const targetId = adjustProductId || (items[0]?.id ?? "");
+    const target = items.find((i) => String(i.id) === String(targetId) || String(i.productId) === String(targetId));
+    if (!target) {
+      setAdjustError("Please select a valid product.");
+      return;
+    }
+    if (adjustQty <= 0) {
+      setAdjustError("Adjustment quantity must be greater than 0.");
+      return;
+    }
+    if (!adjustReason.trim()) {
+      setAdjustError("Reason for adjustment is required.");
+      return;
+    }
+
+    const res = adjustStock({
+      productId: String(target.productId || target.id),
+      store: target.store || adjustLocation,
+      batchNo: target.batchNo,
+      adjustmentType: adjustType,
+      quantity: adjustQty,
+      reason: adjustReason.trim(),
+    });
+
+    if (res.success) {
+      showToast(res.message);
+      setIsAdjustStockOpen(false);
+      setAdjustError("");
+    } else {
+      setAdjustError(res.message);
+    }
+  };
+
+  const handleTransferStock = () => {
+    setTransferError("");
+    if (transferSource === transferDest) {
+      setTransferError("Source and destination facilities cannot be the same.");
+      return;
+    }
+    const targetId = transferProductId || (items[0]?.id ?? "");
+    const target = items.find(
+      (i) =>
+        (String(i.id) === String(targetId) || String(i.productId) === String(targetId)) &&
+        (i.store.toLowerCase().includes(transferSource.toLowerCase()) ||
+          transferSource.toLowerCase().includes(i.store.toLowerCase()))
+    ) || items.find((i) => String(i.id) === String(targetId) || String(i.productId) === String(targetId));
+
+    if (!target) {
+      setTransferError("Please select a product with available stock in the source location.");
+      return;
+    }
+    if (transferQty <= 0) {
+      setTransferError("Transfer quantity must be greater than 0.");
+      return;
+    }
+    if (transferQty > target.quantity) {
+      setTransferError(`Transfer quantity exceeds available stock (${target.quantity} ${target.unit}).`);
+      return;
+    }
+
+    const res = transferStock({
+      sourceStore: transferSource,
+      destinationStore: transferDest,
+      productId: String(target.productId || target.id),
+      batchNo: target.batchNo,
+      quantity: transferQty,
+    });
+
+    if (res.success) {
+      showToast(res.message);
+      setIsTransferStockOpen(false);
+      setTransferError("");
+    } else {
+      setTransferError(res.message);
+    }
   };
 
   const handleBarcodeIdentify = () => {
@@ -307,7 +395,7 @@ export default function RetailerInventory() {
             {isActionMenuOpen && (
               <div className="absolute right-0 top-full mt-2 w-56 bg-card border border-border rounded-[24px] p-2 shadow-none z-40 space-y-1 font-mono text-xs text-foreground animate-in fade-in">
                 <Link
-                  to="/retailer/add-product"
+                  to={location.pathname.startsWith("/admin") ? "/admin/add-product" : "/retailer/add-product"}
                   onClick={() => setIsActionMenuOpen(false)}
                   className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-foreground hover:bg-secondary/40 transition-colors"
                 >
@@ -466,7 +554,7 @@ export default function RetailerInventory() {
                 <th className="px-4 py-3.5 font-bold uppercase">Product</th>
                 <th className="px-4 py-3.5 font-bold uppercase">SKU / Batch</th>
                 <th className="px-4 py-3.5 font-bold uppercase">Location</th>
-                <th className="px-4 py-3.5 font-bold uppercase text-center">Stock Status</th>
+                <th className="px-4 py-3.5 font-bold uppercase text-center whitespace-nowrap min-w-[120px]">Stock Status</th>
                 <th className="px-4 py-3.5 font-bold uppercase text-right">Available</th>
                 <th className="px-4 py-3.5 font-bold uppercase text-right">Reserved</th>
                 <th className="px-4 py-3.5 font-bold uppercase text-right">Distributed</th>
@@ -508,8 +596,12 @@ export default function RetailerInventory() {
                       )}
                     </td>
                     <td className="px-4 py-3.5 text-muted-foreground">{item.store}</td>
-                    <td className="px-4 py-3.5 text-center">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase ${STOCK_STATUS_STYLE[item.stockStatus]}`}>
+                    <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                      <span
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center justify-center ${getStockBadgeStyle(
+                          item.stockStatus
+                        )}`}
+                      >
                         {item.stockStatus}
                       </span>
                     </td>
@@ -527,8 +619,8 @@ export default function RetailerInventory() {
                     </td>
                     <td className="px-4 py-3.5 text-center">
                       {item.expiryTrackingEnabled ? (
-                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${EXPIRY_STATUS_STYLE[item.expiryStatus]}`}>
-                          {item.daysRemaining !== undefined ? `${item.daysRemaining}d left` : item.expiryStatus}
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase whitespace-nowrap inline-flex items-center gap-1 ${EXPIRY_STATUS_STYLE[item.expiryStatus]}`}>
+                          {item.daysRemaining !== undefined ? `${item.daysRemaining}D LEFT` : item.expiryStatus}
                         </span>
                       ) : (
                         <span className="text-[10.5px] text-muted-foreground">N/A</span>
@@ -574,53 +666,404 @@ export default function RetailerInventory() {
       </div>
 
       {/* Modals */}
-      {isAddStockOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in">
-          <div className="w-full max-w-md bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 shadow-none text-foreground space-y-4">
-            <h3 className="font-display text-xl font-bold uppercase text-foreground">Add Stock Count</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="text-muted-foreground uppercase font-bold block mb-1">Product</label>
-                <select
-                  value={addStockProductId || String(items[0]?.id ?? "")}
-                  onChange={(e) => setAddStockProductId(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none"
+      {/* Add Stock Count Modal */}
+      {isAddStockOpen && (() => {
+        const selectedProd = items.find((i) => String(i.id) === String(addStockProductId || items[0]?.id));
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in">
+            <div className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <h3 className="font-display text-xl font-bold uppercase text-foreground">Add Stock Count</h3>
+                <button
+                  type="button"
+                  onClick={() => setIsAddStockOpen(false)}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
                 >
-                  {items.map((i) => (
-                    <option key={i.id} value={String(i.id)}>{i.name} (Current: {i.quantity} {i.unit})</option>
-                  ))}
-                </select>
+                  <X className="size-4" />
+                </button>
               </div>
-              <div>
-                <label className="text-muted-foreground uppercase font-bold block mb-1">Quantity to Add</label>
-                <input
-                  type="number"
-                  value={addStockQty}
-                  onChange={(e) => setAddStockQty(Math.max(1, Number(e.target.value)))}
-                  min={1}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none"
-                />
+
+              {addStockError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-bold">
+                  {addStockError}
+                </div>
+              )}
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Product *</label>
+                  <select
+                    value={addStockProductId || String(items[0]?.id ?? "")}
+                    onChange={(e) => setAddStockProductId(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  >
+                    {items.map((i) => (
+                      <option key={i.id} value={String(i.id)}>
+                        {i.name} ({i.sku}) — Current: {i.quantity} {i.unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Facility / Location *</label>
+                    <select
+                      value={addStockLocation}
+                      onChange={(e) => setAddStockLocation(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    >
+                      {AVAILABLE_LOCATIONS.filter((l) => l !== "All Locations").map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Quantity to Ingest *</label>
+                    <input
+                      type="number"
+                      value={addStockQty}
+                      onChange={(e) => setAddStockQty(Math.max(1, Number(e.target.value)))}
+                      min={1}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">
+                      Batch Number {selectedProd?.expiryTrackingEnabled ? "*" : "(Optional)"}
+                    </label>
+                    <input
+                      type="text"
+                      placeholder={selectedProd?.expiryTrackingEnabled ? "e.g. LOT-2026-X9" : "e.g. BATCH-01"}
+                      value={addStockBatch}
+                      onChange={(e) => setAddStockBatch(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Unit Cost (₹)</label>
+                    <input
+                      type="number"
+                      placeholder={selectedProd ? String(selectedProd.unitPrice) : "100"}
+                      value={addStockCost}
+                      onChange={(e) => setAddStockCost(e.target.value)}
+                      min={1}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+                </div>
+
+                {selectedProd?.expiryTrackingEnabled && (
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Expiry Date *</label>
+                    <input
+                      type="date"
+                      value={addStockExpiry}
+                      onChange={(e) => setAddStockExpiry(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    />
+                  </div>
+                )}
               </div>
-            </div>
-            <div className="flex justify-end gap-2 pt-2 border-t border-border">
-              <button
-                type="button"
-                onClick={() => setIsAddStockOpen(false)}
-                className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleCommitStock}
-                className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none"
-              >
-                Commit Stock
-              </button>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsAddStockOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleCommitStock}
+                  className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none"
+                >
+                  Commit Stock
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
+
+      {/* Adjust Stock Modal */}
+      {isAdjustStockOpen && (() => {
+        const selectedProd = items.find((i) => String(i.id) === String(adjustProductId || items[0]?.id));
+        const currentQty = selectedProd?.quantity || 0;
+        const currentUnit = selectedProd?.unit || "Pcs";
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in">
+            <div className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div>
+                  <h3 className="font-display text-xl font-bold uppercase text-foreground">Adjust Stock</h3>
+                  <p className="text-muted-foreground text-[11px] mt-0.5">
+                    Reconcile inventory discrepancies, record shrink, or correct inventory counts.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsAdjustStockOpen(false)}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              {adjustError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-bold">
+                  {adjustError}
+                </div>
+              )}
+
+              <div className="space-y-3.5">
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Target Product *</label>
+                  <select
+                    value={adjustProductId || String(items[0]?.id ?? "")}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAdjustProductId(val);
+                      const sel = items.find((i) => String(i.id) === val || String(i.productId) === val);
+                      if (sel?.store) {
+                        setAdjustLocation(sel.store);
+                      }
+                    }}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  >
+                    {items.map((i) => (
+                      <option key={i.id} value={String(i.id)}>
+                        {i.name} ({i.store}) — Available: {i.quantity} {i.unit}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
+                  <span className="text-muted-foreground uppercase font-bold">Current Recorded Stock:</span>
+                  <span className="font-bold text-foreground text-sm">
+                    {currentQty} {currentUnit}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Location *</label>
+                    <select
+                      value={adjustLocation}
+                      onChange={(e) => setAdjustLocation(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    >
+                      {AVAILABLE_LOCATIONS.filter((l) => l !== "All Locations").map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Adjustment Type *</label>
+                    <select
+                      value={adjustType}
+                      onChange={(e) => setAdjustType(e.target.value as "Add" | "Remove" | "Correction")}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary font-bold"
+                    >
+                      <option value="Add">+ Add Stock (Inflow / Found)</option>
+                      <option value="Remove">- Remove Stock (Damage / Expiry / Loss)</option>
+                      <option value="Correction">= Absolute Count (Audit Override)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">
+                    {adjustType === "Correction" ? "New Total Count *" : "Units to Adjust *"}
+                  </label>
+                  <input
+                    type="number"
+                    value={adjustQty}
+                    onChange={(e) => setAdjustQty(Math.max(1, Number(e.target.value)))}
+                    min={1}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  />
+                  {adjustType === "Remove" && (
+                    <span className="text-[10px] text-muted-foreground mt-1 block">
+                      Maximum allowable reduction: {currentQty} units.
+                    </span>
+                  )}
+                </div>
+
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Reason for Adjustment *</label>
+                  <input
+                    type="text"
+                    value={adjustReason}
+                    onChange={(e) => setAdjustReason(e.target.value)}
+                    placeholder="e.g. Physical stock take discrepancy, broken packaging..."
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsAdjustStockOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdjustStock}
+                  className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none"
+                >
+                  Confirm Adjustment
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Transfer Stock Modal */}
+      {isTransferStockOpen && (() => {
+        const sourceProducts = items.filter(
+          (i) =>
+            i.quantity > 0 &&
+            (i.store.toLowerCase().includes(transferSource.toLowerCase()) ||
+              transferSource.toLowerCase().includes(i.store.toLowerCase()))
+        );
+        const effectiveProdList = sourceProducts.length > 0 ? sourceProducts : items.filter((i) => i.quantity > 0);
+        const selectedProd = effectiveProdList.find((i) => String(i.id) === String(transferProductId || effectiveProdList[0]?.id));
+        const availQty = selectedProd?.quantity || 0;
+        const currentUnit = selectedProd?.unit || "Pcs";
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in">
+            <div className="w-full max-w-lg bg-card border border-border rounded-[24px] sm:rounded-[32px] p-6 sm:p-7 shadow-none text-foreground space-y-4 max-h-[90vh] overflow-y-auto">
+              <div className="flex items-center justify-between pb-3 border-b border-border">
+                <div>
+                  <h3 className="font-display text-xl font-bold uppercase text-foreground">Transfer Stock</h3>
+                  <p className="text-muted-foreground text-[11px] mt-0.5">
+                    Move stock across network facilities while maintaining lot traceability.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsTransferStockOpen(false)}
+                  className="p-1 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground"
+                >
+                  <X className="size-4" />
+                </button>
+              </div>
+
+              {transferError && (
+                <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/30 text-destructive text-xs font-bold">
+                  {transferError}
+                </div>
+              )}
+
+              <div className="space-y-3.5">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Source Facility *</label>
+                    <select
+                      value={transferSource}
+                      onChange={(e) => setTransferSource(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    >
+                      {AVAILABLE_LOCATIONS.filter((l) => l !== "All Locations").map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="text-muted-foreground uppercase font-bold block mb-1">Destination Facility *</label>
+                    <select
+                      value={transferDest}
+                      onChange={(e) => setTransferDest(e.target.value)}
+                      className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                    >
+                      {AVAILABLE_LOCATIONS.filter((l) => l !== "All Locations").map((loc) => (
+                        <option key={loc} value={loc}>
+                          {loc}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Product to Transfer *</label>
+                  <select
+                    value={transferProductId || String(effectiveProdList[0]?.id ?? "")}
+                    onChange={(e) => setTransferProductId(e.target.value)}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  >
+                    {effectiveProdList.map((i) => (
+                      <option key={i.id} value={String(i.id)}>
+                        {i.name} — In Stock: {i.quantity} {i.unit} (Batch: {i.batchNo || "Standard"})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="p-3 rounded-xl bg-secondary/30 border border-border flex items-center justify-between">
+                  <span className="text-muted-foreground uppercase font-bold">Source Stock Available:</span>
+                  <span className="font-bold text-foreground text-sm">
+                    {availQty} {currentUnit}
+                  </span>
+                </div>
+
+                <div>
+                  <label className="text-muted-foreground uppercase font-bold block mb-1">Transfer Quantity *</label>
+                  <input
+                    type="number"
+                    value={transferQty}
+                    onChange={(e) => setTransferQty(Math.max(1, Number(e.target.value)))}
+                    min={1}
+                    max={availQty || 1}
+                    className="w-full bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-foreground outline-none focus:border-primary"
+                  />
+                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                    Available: {availQty} {currentUnit}. Preserves batch number and expiration date across nodes.
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border">
+                <button
+                  type="button"
+                  onClick={() => setIsTransferStockOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleTransferStock}
+                  className="px-5 py-2 rounded-lg bg-primary text-primary-foreground uppercase font-bold hover:bg-[#567C8D] cursor-pointer shadow-none"
+                >
+                  Confirm Transfer
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {isBarcodeScanOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#2F4156]/60 backdrop-blur-xs font-mono text-xs animate-in fade-in">
