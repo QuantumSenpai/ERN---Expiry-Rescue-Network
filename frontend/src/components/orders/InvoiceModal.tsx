@@ -1,5 +1,151 @@
-﻿import { X, Printer, Download, Leaf, ShieldCheck } from "lucide-react";
+import { X, Printer, Download, Leaf, ShieldCheck } from "lucide-react";
 import type { Order } from "@/data/ordersData";
+
+export function downloadInvoiceHtml(order: Order) {
+  const invoiceHtml = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Tax Invoice - ${order.id}</title>
+  <style>
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; margin: 40px; color: #1e293b; line-height: 1.5; }
+    .header { border-bottom: 2px solid #10b981; padding-bottom: 20px; display: flex; justify-content: space-between; align-items: flex-start; }
+    .title { font-size: 24px; font-weight: 800; color: #0f172a; margin: 0; }
+    .subtitle { color: #64748b; font-size: 14px; margin: 4px 0 0 0; }
+    .meta-box { margin-top: 24px; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; font-size: 13px; }
+    .meta-label { color: #64748b; font-size: 11px; text-transform: uppercase; font-weight: 600; }
+    .meta-val { font-weight: 700; color: #0f172a; margin-top: 2px; }
+    .parties { margin-top: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px; font-size: 13px; }
+    .party-card { background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; }
+    .table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 13px; }
+    .table th { background: #f1f5f9; text-align: left; padding: 10px 12px; font-weight: 700; border-bottom: 2px solid #cbd5e1; }
+    .table td { padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+    .text-right { text-align: right; }
+    .text-center { text-align: center; }
+    .summary { margin-top: 24px; margin-left: auto; width: 280px; font-size: 13px; }
+    .summary-row { display: flex; justify-content: space-between; padding: 6px 0; }
+    .total-row { font-size: 16px; font-weight: 800; border-top: 2px solid #0f172a; padding-top: 8px; color: #10b981; }
+    .footer { margin-top: 40px; border-top: 1px solid #e2e8f0; padding-top: 16px; font-size: 12px; color: #94a3b8; text-align: center; }
+    @media print { body { margin: 0; } }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div>
+      <h1 class="title">TAX INVOICE / RESCUE RECEIPT</h1>
+      <p class="subtitle">Expiry Rescue Network India Pvt. Ltd. &bull; GSTIN: 27AABCE1234F1Z5</p>
+    </div>
+    <div style="text-align: right;">
+      <div style="font-weight: 800; font-size: 18px; color: #10b981;">ERN RESCUE PASS</div>
+      <div style="color: #64748b; font-size: 12px;">Verified Anti-Waste Fulfillment</div>
+    </div>
+  </div>
+
+  <div class="meta-box">
+    <div>
+      <div class="meta-label">Invoice Number</div>
+      <div class="meta-val">INV-${order.id.replace("ERN-", "")}</div>
+    </div>
+    <div>
+      <div class="meta-label">Order Reference</div>
+      <div class="meta-val">${order.id}</div>
+    </div>
+    <div>
+      <div class="meta-label">Order Date</div>
+      <div class="meta-val">${order.orderDate}</div>
+    </div>
+    <div>
+      <div class="meta-label">Payment Mode</div>
+      <div class="meta-val">${order.paymentMethod}</div>
+    </div>
+  </div>
+
+  <div class="parties">
+    <div class="party-card">
+      <div class="meta-label">Billed & Shipped To</div>
+      <div class="meta-val" style="font-size: 14px; margin-bottom: 4px;">${order.shippingAddress.recipientName}</div>
+      <div>${order.shippingAddress.addressLine1}</div>
+      <div>${order.shippingAddress.city}, ${order.shippingAddress.state} - ${order.shippingAddress.pincode}</div>
+      <div style="margin-top: 4px; color: #64748b;">Contact: ${order.shippingAddress.phone}</div>
+    </div>
+    <div class="party-card">
+      <div class="meta-label">Dispatch Warehouse</div>
+      <div class="meta-val" style="font-size: 14px; margin-bottom: 4px;">${order.storeName || "Central Logistics Hub"}</div>
+      <div>Gate 2, MIDC Industrial Corridor</div>
+      <div>Mumbai, Maharashtra - 400093</div>
+      <div style="margin-top: 4px; color: #10b981; font-weight: 600;">&#10003; 100% Quality & Expiry Verified</div>
+    </div>
+  </div>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Item Description</th>
+        <th>Batch Tier</th>
+        <th class="text-center">Qty</th>
+        <th class="text-right">MRP</th>
+        <th class="text-right">Discount</th>
+        <th class="text-right">Net Price</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${order.items
+        .map(
+          (it) => `
+        <tr>
+          <td><strong>${it.name}</strong></td>
+          <td>${it.batchType || "Rescue"} (${it.shelfLifeAtPurchase || "Verified"})</td>
+          <td class="text-center">${it.quantity}</td>
+          <td class="text-right">&#8377;${it.originalPrice}</td>
+          <td class="text-right" style="color: #10b981;">-&#8377;${it.savings}</td>
+          <td class="text-right"><strong>&#8377;${it.paidPrice * it.quantity}</strong></td>
+        </tr>
+      `
+        )
+        .join("")}
+    </tbody>
+  </table>
+
+  <div class="summary">
+    <div class="summary-row">
+      <span>Items Subtotal:</span>
+      <span>&#8377;${order.itemsSubtotal}</span>
+    </div>
+    <div class="summary-row" style="color: #10b981;">
+      <span>ERN Rescue Discount:</span>
+      <span>-&#8377;${order.ernDiscount}</span>
+    </div>
+    <div class="summary-row">
+      <span>Delivery Fee:</span>
+      <span>${order.deliveryFee === 0 ? "FREE" : `&#8377;${order.deliveryFee}`}</span>
+    </div>
+    <div class="summary-row" style="color: #64748b;">
+      <span>GST (0% Applicable):</span>
+      <span>&#8377;0</span>
+    </div>
+    <div class="summary-row total-row">
+      <span>Total Paid:</span>
+      <span>&#8377;${order.totalPaid}</span>
+    </div>
+  </div>
+
+  <div class="footer">
+    <p>This is a computer-generated tax invoice issued by Expiry Rescue Network (ERN). Thank you for saving food and reducing retail waste!</p>
+    <p>&copy; ${new Date().getFullYear()} ERN. All rights reserved.</p>
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([invoiceHtml], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `Invoice-${order.id}.html`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 interface InvoiceModalProps {
   order: Order | null;
@@ -162,13 +308,13 @@ export default function InvoiceModal({ order, onClose }: InvoiceModalProps) {
           <button
             type="button"
             onClick={() => {
-              alert(`Downloading Invoice for ${order.id}...`);
+              downloadInvoiceHtml(order);
               onClose();
             }}
             className="px-5 py-2 rounded-xl bg-[#10B981] hover:bg-[#10B981]/90 text-foreground font-bold text-xs flex items-center gap-2 cursor-pointer shadow-lg shadow-[#10B981]/20"
           >
             <Download className="size-3.5" />
-            <span>Download PDF</span>
+            <span>Download Invoice</span>
           </button>
         </div>
       </div>
