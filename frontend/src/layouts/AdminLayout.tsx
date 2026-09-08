@@ -1,4 +1,4 @@
-﻿import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
@@ -23,6 +23,7 @@ import {
   BarChart3,
   ClipboardList,
   Bell,
+  ShoppingBag,
 } from "lucide-react";
 import WasteInsightsModal from "@/components/WasteInsightsModal";
 import CalendarModal from "@/components/CalendarModal";
@@ -45,6 +46,7 @@ const ADMIN_NAV_SECTIONS: NavSection[] = [
     heading: "MAIN",
     items: [
       { label: "Dashboard", to: "/admin/dashboard", icon: LayoutDashboard },
+      { label: "Orders", to: "/admin/orders", icon: ShoppingBag },
       { label: "Listings", to: "/admin/listings", icon: Store },
       { label: "Inventory", to: "/admin/inventory", icon: Package },
       { label: "Transfers", to: "/admin/transfers", icon: ArrowLeftRight },
