@@ -28,11 +28,16 @@ import MarketplaceHome from "@/pages/customer/MarketplaceHome";
 import RetailerCheckout from "@/pages/retailer/Checkout";
 import RetailerOrderSuccess from "@/pages/retailer/OrderSuccess";
 import RetailerOrderDetail from "@/pages/retailer/OrderDetail";
+import RetailerOrders from "@/pages/retailer/RetailerOrders";
+import RetailerProductDetail from "@/pages/retailer/RetailerProductDetail";
+import RetailerInventoryDetail from "@/pages/retailer/RetailerInventoryDetail";
+import RetailerBatchDetail from "@/pages/retailer/RetailerBatchDetail";
 import RetailerProducts from "@/pages/retailer/Products";
 import RetailerBatches from "@/pages/retailer/Batches";
 import ExpiryMonitor from "@/pages/retailer/ExpiryMonitor";
 import ExpiryIntelligence from "@/pages/retailer/ExpiryIntelligence";
 import StaffRequests from "@/pages/retailer/StaffRequests";
+import StaffSettings from "@/pages/retailer/StaffSettings";
 import Alerts from "@/pages/retailer/Alerts";
 import Clearance from "@/pages/retailer/Clearance";
 import AddProduct from "@/pages/retailer/AddProduct";
@@ -44,9 +49,13 @@ import RetailerUsers from "@/pages/retailer/RetailerUsers";
 
 import Browse from "@/pages/customer/Browse";
 import Orders from "@/pages/customer/Orders";
+import CustomerOrderDetail from "@/pages/customer/CustomerOrderDetail";
 import Profile from "@/pages/customer/Profile";
 import SavedItems from "@/pages/customer/SavedItems";
 import CustomerAlerts from "@/pages/customer/CustomerAlerts";
+import ProductDetail from "@/pages/customer/ProductDetail";
+import Cart from "@/pages/customer/Cart";
+import CustomerCheckout from "@/pages/customer/CustomerCheckout";
 
 import AdminDashboard from "@/pages/admin/Dashboard";
 import AdminUsers from "@/pages/admin/Users";
@@ -126,29 +135,38 @@ function AnimatedRoutes() {
             }
           >
             <Route index element={<MarketplaceHome />} />
+            <Route path="product/:productId" element={<ProductDetail />} />
+            <Route path="cart" element={<Cart />} />
+            <Route path="checkout" element={<CustomerCheckout />} />
           </Route>
 
           {/* Customer Protected Canonical Routes inside MarketplaceLayout */}
           <Route
             path="/customer"
             element={
-              <ProtectedRoute allowedRoles={["customer"]}>
+              <ProtectedRoute allowedRoles={["customer", "retailer", "admin"]}>
                 <MarketplaceLayout />
               </ProtectedRoute>
             }
           >
             <Route index element={<Navigate to="/marketplace" replace />} />
             <Route path="browse" element={<Browse />} />
+            <Route path="product/:productId" element={<ProductDetail />} />
+            <Route path="cart" element={<Cart />} />
             <Route path="saved-items" element={<SavedItems />} />
             <Route path="orders" element={<Orders />} />
-            <Route path="orders/:id" element={<RetailerOrderDetail />} />
-            <Route path="checkout" element={<RetailerCheckout />} />
+            <Route path="orders/:id" element={<CustomerOrderDetail />} />
+            <Route path="checkout" element={<CustomerCheckout />} />
             <Route path="order-success" element={<RetailerOrderSuccess />} />
             <Route path="profile" element={<Profile />} />
             <Route path="alerts" element={<CustomerAlerts />} />
           </Route>
 
           {/* Legacy Customer Aliases (Redirecting to Canonical Customer Routes) */}
+          <Route
+            path="/cart"
+            element={<Navigate to="/customer/cart" replace />}
+          />
           <Route
             path="/browse"
             element={<Navigate to="/customer/browse" replace />}
@@ -196,14 +214,6 @@ function AnimatedRoutes() {
           <Route
             path="/retailer/order-success"
             element={<Navigate to="/customer/order-success" replace />}
-          />
-          <Route
-            path="/retailer/orders"
-            element={<Navigate to="/customer/orders" replace />}
-          />
-          <Route
-            path="/retailer/orders/:id"
-            element={<Navigate to="/customer/orders" replace />}
           />
           <Route
             path="/retailer/profile"
@@ -288,28 +298,14 @@ function AnimatedRoutes() {
             <Route index element={<StaffOperationsDashboard />} />
             <Route path="dashboard" element={<StaffOperationsDashboard />} />
             <Route path="products" element={<RetailerProducts />} />
-            <Route
-              path="products/:id"
-              element={<UnderConstruction moduleName="Product Detail View" />}
-            />
+            <Route path="products/:id" element={<RetailerProductDetail />} />
             <Route path="inventory" element={<Inventory />} />
-            <Route
-              path="inventory/:id"
-              element={<UnderConstruction moduleName="Inventory Item Log" />}
-            />
+            <Route path="inventory/:id" element={<RetailerInventoryDetail />} />
             <Route path="batches" element={<RetailerBatches />} />
-            <Route
-              path="batches/:id"
-              element={
-                <UnderConstruction moduleName="Batch Traceability Log" />
-              }
-            />
+            <Route path="batches/:id" element={<RetailerBatchDetail />} />
             <Route path="expiry" element={<ExpiryIntelligence />} />
             <Route path="expiry-monitor" element={<ExpiryIntelligence />} />
-            <Route
-              path="expiry-intelligence"
-              element={<ExpiryIntelligence />}
-            />
+            <Route path="expiry-intelligence" element={<ExpiryIntelligence />} />
             <Route path="requests" element={<StaffRequests />} />
             <Route path="alerts" element={<Alerts />} />
             <Route path="clearance" element={<Clearance />} />
@@ -318,7 +314,9 @@ function AnimatedRoutes() {
             <Route path="analytics" element={<Reports />} />
             <Route path="suppliers" element={<Suppliers />} />
             <Route path="users" element={<RetailerUsers />} />
-            <Route path="settings" element={<AdminSettings />} />
+            <Route path="settings" element={<StaffSettings />} />
+            <Route path="orders" element={<RetailerOrders />} />
+            <Route path="orders/:id" element={<RetailerOrderDetail />} />
             <Route path="add-product" element={<AddProduct />} />
           </Route>
 
@@ -344,6 +342,8 @@ function AnimatedRoutes() {
             <Route path="expiry-monitor" element={<ExpiryMonitor />} />
             <Route path="products" element={<RetailerProducts />} />
             <Route path="batches" element={<RetailerBatches />} />
+            <Route path="orders" element={<RetailerOrders />} />
+            <Route path="orders/:id" element={<RetailerOrderDetail />} />
             <Route path="sales" element={<Sales />} />
             <Route path="add-product" element={<AddProduct />} />
             <Route path="alerts" element={<Alerts />} />
