@@ -1,4 +1,3 @@
-﻿import { useState } from "react";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import {
   ArrowRight,
@@ -70,7 +69,6 @@ const RISK_BADGE_STYLE: Record<
 
 export default function ItemCard(props: ItemCardProps) {
   const {
-    id,
     name,
     category,
     location = props.store || "Main Branch",
@@ -89,13 +87,13 @@ export default function ItemCard(props: ItemCardProps) {
 
   return (
     <div
-      className={`group relative flex flex-col justify-between bg-card border border-[#2F4156]/15 rounded-2xl overflow-hidden shadow-none ern-card-hover ${
+      className={`group relative flex flex-col h-full justify-between bg-card border border-[#2F4156]/15 rounded-2xl overflow-hidden shadow-none ern-card-hover ${
         expiryStatus === "Critical" ? "ern-card-glow" : "ern-card-glow"
       }`}
     >
-      <div>
+      <div className="flex flex-col flex-1">
         {/* Product Image */}
-        <div className="relative w-full h-44 bg-secondary overflow-hidden">
+        <div className="relative w-full h-44 shrink-0 bg-secondary overflow-hidden">
           <img
             src={imageUrl}
             alt={name}
@@ -118,46 +116,52 @@ export default function ItemCard(props: ItemCardProps) {
         </div>
 
         {/* Card Content */}
-        <div className="p-5">
-          <div className="flex items-center justify-between gap-2">
+        <div className="p-5 flex flex-col flex-1">
+          <div className="flex items-center justify-between gap-2 h-5">
             <span className="font-mono text-xs text-muted-foreground tracking-wider uppercase font-semibold">
               {sku}
             </span>
-            {batchNo && (
-              <span className="font-mono text-xs text-muted-foreground">
+            {batchNo ? (
+              <span className="font-mono text-xs text-muted-foreground truncate">
                 Batch: {batchNo}
+              </span>
+            ) : (
+              <span className="font-mono text-xs text-muted-foreground">
+                Batch: Standalone
               </span>
             )}
           </div>
 
-          <h3 className="font-display font-medium text-lg sm:text-xl text-foreground tracking-[-0.015em] leading-snug mt-1.5 line-clamp-2">
+          <h3 className="font-display font-medium text-lg sm:text-xl text-foreground tracking-[-0.015em] leading-snug mt-1.5 line-clamp-2 min-h-[3.25rem]">
             {name}
           </h3>
 
-          <p className="text-xs text-muted-foreground font-sans mt-1">{brand} · {location}</p>
+          <p className="text-xs text-muted-foreground font-sans mt-1 truncate min-h-[1.25rem]">{brand} · {location}</p>
 
           {/* Inventory & Expiry Metrics */}
-          <div className="mt-4 p-3.5 rounded-xl bg-secondary/60 border border-[#2F4156]/10 dark:border-transparent grid grid-cols-2 gap-2 text-xs font-mono">
-            <div>
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Stock</span>
-              <span className="font-bold text-foreground">
-                <AnimatedNumber value={quantity} /> {unit}
-              </span>
-            </div>
-            <div>
-              <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Shelf Life</span>
-              {expiryTrackingEnabled ? (
-                <span className="font-bold text-foreground">{daysRemaining}d left</span>
-              ) : (
-                <span className="text-muted-foreground">Durable</span>
-              )}
+          <div className="mt-auto pt-4">
+            <div className="p-3.5 rounded-xl bg-secondary/60 border border-[#2F4156]/10 dark:border-transparent grid grid-cols-2 gap-2 text-xs font-mono">
+              <div>
+                <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Stock</span>
+                <span className="font-bold text-foreground">
+                  <AnimatedNumber value={quantity} /> {unit}
+                </span>
+              </div>
+              <div>
+                <span className="text-[10px] text-muted-foreground block uppercase font-semibold">Shelf Life</span>
+                {expiryTrackingEnabled ? (
+                  <span className="font-bold text-foreground whitespace-nowrap inline-flex items-center gap-1">{daysRemaining}D LEFT</span>
+                ) : (
+                  <span className="text-muted-foreground">Durable</span>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </div>
 
       {/* Card Footer CTA */}
-      <div className="p-5 pt-0">
+      <div className="p-5 pt-0 mt-auto">
         <Link
           to={`/retailer/inventory`}
           className="w-full py-2.5 rounded-full bg-primary text-primary-foreground text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 hover:opacity-90 transition-colors shadow-none ern-btn-hover"
