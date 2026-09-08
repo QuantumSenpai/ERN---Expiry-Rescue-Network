@@ -1,10 +1,11 @@
-﻿import {
+import {
   createContext,
   useContext,
   useState,
   useEffect,
   type ReactNode,
   useMemo,
+  useCallback,
 } from "react";
 import {
   MASTER_PRODUCTS,
@@ -12,16 +13,29 @@ import {
   type ProductOffer,
 } from "@/data/marketplaceData";
 import {
+  calculateExpiryStatus,
+  type ExpiryCalculationResult,
+} from "@/lib/expiryService";
+import { calculatePricing, formatINR } from "@/lib/pricingService";
+import {
   getStoredOrders,
   saveStoredOrders,
   type Order,
   type OrderItem,
 } from "@/data/ordersData";
+import {
+  inventoryStore,
+  normalizeStoreId,
+  getStoreDisplayName,
+  INVENTORY_UPDATE_EVENT,
+} from "@/lib/inventoryStore";
 
 export interface CartItem {
   product: MarketplaceProduct;
   selectedOffer: ProductOffer;
   quantity: number;
+  storeId?: string;
+  storeName?: string;
 }
 
 export interface SavedAddress {
@@ -63,9 +77,38 @@ export interface PlacedOrderData {
   estimatedDelivery: string;
 }
 
+export interface CartValidationIssue {
+  productId: string;
+  productName: string;
+  type: "expired" | "out_of_stock" | "price_changed" | "quantity_reduced";
+  message: string;
+  adjustedQuantity?: number;
+}
+
+export interface CartValidationResult {
+  isValid: boolean;
+  issues: CartValidationIssue[];
+}
+
+export interface ReorderResult {
+  successCount: number;
+  partialCount: number;
+  unavailableCount: number;
+  addedItemNames: string[];
+  partialItemNames: string[];
+  unavailableItemNames: string[];
+  message: string;
+}
+
 interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: MarketplaceProduct, offer?: ProductOffer) => void;
+  addToCart: (
+    product: MarketplaceProduct,
+    offer?: ProductOffer,
+    quantity?: number,
+    storeId?: string,
+    storeName?: string
+  ) => void;
   updateQty: (idx: number, delta: number) => void;
   removeItem: (idx: number) => void;
   clearCart: () => void;
@@ -73,16 +116,21 @@ interface CartContextType {
   totalAmount: number;
   totalSavings: number;
   originalTotal: number;
+  formattedTotalAmount: string;
+  formattedTotalSavings: string;
+  formattedOriginalTotal: string;
   wishlist: Set<string>;
-  toggleWishlist: (product: MarketplaceProduct) => void;
+  toggleWishlist: (product: MarketplaceProduct) => boolean;
   removeFromWishlist: (productId: string) => void;
   addToWishlist: (productId: string) => void;
   isCartBouncing: boolean;
+  validateCart: () => CartValidationResult;
+  reorderFromPastOrder: (order: Order) => ReorderResult;
   addresses: SavedAddress[];
   selectedAddressId: string;
   setSelectedAddressId: (id: string) => void;
   selectedAddress: SavedAddress;
-  addAddress: (address: Omit<SavedAddress, "id">) => void;
+  addAddress: (address: Omit<SavedAddress, "id">) => SavedAddress;
   updateAddress: (id: string, address: Partial<SavedAddress>) => void;
   removeAddress: (id: string) => void;
   setDefaultAddress: (id: string) => void;
@@ -103,41 +151,12 @@ interface CartContextType {
   createOrder: () => PlacedOrderData;
 }
 
-const DEFAULT_ADDRESSES: SavedAddress[] = [
-  {
-    id: "addr-1",
-    type: "Home",
-    recipientName: "Alex",
-    tagline: "Workspace Member & Retail Partner",
-    addressLine1: "Plot 42, Sector 18, Phase II, Industrial Area",
-    addressLine2: "Near Central Food Logistics Hub",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400072",
-    phone: "+91 98765 43210",
-    isDefault: true,
-  },
-  {
-    id: "addr-2",
-    type: "Warehouse",
-    recipientName: "Central Warehouse Dispatch",
-    tagline: "Main Branch Dock 4",
-    addressLine1: "ERN Regional Fulfillment Center, Gate 2",
-    addressLine2: "MIDC Andheri East",
-    city: "Mumbai",
-    state: "Maharashtra",
-    pincode: "400093",
-    phone: "+91 98220 11223",
-    isDefault: false,
-  },
-];
-
 const DELIVERY_OPTIONS: DeliveryOption[] = [
   {
     id: "standard",
     title: "Standard Delivery",
-    subtitle: "Eco-routed standard delivery",
-    duration: "2–3 Days",
+    subtitle: "Eco-routed local delivery",
+    duration: "Tomorrow",
     fee: 30,
     freeThreshold: 500,
     tag: "Free above ₹500",
@@ -145,15 +164,15 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
   {
     id: "express",
     title: "Express Delivery",
-    subtitle: "Fast-track guaranteed priority dispatch",
-    duration: "Same / Next Day",
+    subtitle: "Priority dispatch within 3 hours",
+    duration: "Today (in 3 hrs)",
     fee: 49,
-    tag: "⚡ Faster",
+    tag: "⚡ Fast",
   },
   {
     id: "pickup",
     title: "Store / Hub Pickup",
-    subtitle: "Collect in person from Central Warehouse / Main Branch",
+    subtitle: "Collect in person from nearest branch",
     duration: "Ready in 1 hour",
     fee: 0,
     tag: "100% Free",
@@ -163,85 +182,152 @@ const DELIVERY_OPTIONS: DeliveryOption[] = [
 const PAYMENT_METHODS = [
   {
     id: "upi",
-    title: "UPI (Google Pay, PhonePe, Paytm)",
-    description: "Instant zero-fee transfer via any verified UPI App or ID",
+    title: "UPI (Google Pay, PhonePe, Paytm, BHIM)",
+    description: "Instant payment via any UPI app or ID",
     iconName: "Zap",
     badge: "Recommended",
   },
   {
     id: "card",
     title: "Credit / Debit Card",
-    description: "Visa, MasterCard, RuPay, Corporate Amex with 3D Secure",
+    description: "Visa, MasterCard, RuPay with secure OTP authentication",
     iconName: "CreditCard",
   },
   {
     id: "cod",
-    title: "Cash on Delivery / Counter Pickup",
-    description: "Pay upon physical inspection at your address or counter",
+    title: "Cash on Delivery",
+    description: "Pay upon physical delivery of your order",
     iconName: "Coins",
   },
-  {
-    id: "wallet",
-    title: "ERN Green Wallet / Amazon Pay",
-    description: "Use your ERN Rescue credits & cashback balance (₹240 available)",
-    iconName: "Wallet",
-    badge: "₹240 Balance",
-  },
 ];
+
+export function normalizeCartItem(raw: any, idx = 0): CartItem | null {
+  if (!raw || typeof raw !== "object") return null;
+
+  // 1. Resolve product
+  const rawProduct = raw.product || raw;
+  const productId = String(rawProduct.id || raw.id || raw.productId || `item-${idx}`);
+  const productName = String(rawProduct.name || raw.name || raw.title || "Grocery Item");
+  const brand = String(rawProduct.brand || raw.brand || "ERN Verified");
+  const unit = String(rawProduct.unit || raw.unit || "1 unit");
+  const category = String(rawProduct.category || raw.category || "Pantry");
+  const rawMrp = Number(rawProduct.mrp ?? raw.mrp ?? rawProduct.price ?? raw.price ?? 0);
+  const rawPrice = Number(rawProduct.price ?? raw.price ?? rawMrp ?? 0);
+  const mrp = isNaN(rawMrp) ? 0 : rawMrp;
+  const price = isNaN(rawPrice) ? mrp : rawPrice;
+  const imageUrl = String(
+    rawProduct.imageUrl ||
+    raw.imageUrl ||
+    rawProduct.image ||
+    raw.image ||
+    "https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80"
+  );
+
+  // 2. Resolve selectedOffer
+  const rawOffer = raw.selectedOffer || raw.offer || {};
+  const offerId = String(rawOffer.id || `offer-${productId}-${idx}`);
+  const batchNumber = String(rawOffer.batchNumber || raw.batchNumber || `BAT-${idx + 1}`);
+  const rawOfferPrice = Number(rawOffer.price ?? price);
+  const offerPrice = isNaN(rawOfferPrice) ? price : rawOfferPrice;
+  const rawOfferMrp = Number(rawOffer.mrp ?? mrp ?? offerPrice);
+  const offerMrp = isNaN(rawOfferMrp) ? Math.max(mrp, offerPrice) : rawOfferMrp;
+  const offerType = String(rawOffer.type || raw.type || (offerPrice < offerMrp ? "Rescue Deal" : "Fresh Stock"));
+  const rawAvail = Number(rawOffer.availability ?? raw.availability ?? raw.stock ?? 99);
+  const availability = isNaN(rawAvail) ? 99 : Math.max(1, rawAvail);
+
+  // Safe expiry date - preserve actual date if valid, never invent fake dates
+  const candidateExpiry = String(rawOffer.expiryDate || raw.expiryDate || "");
+  const safeExpiry = candidateExpiry && !isNaN(new Date(candidateExpiry).getTime())
+    ? candidateExpiry
+    : "";
+
+  const selectedOffer: ProductOffer = {
+    id: offerId,
+    batchNumber,
+    expiryDate: safeExpiry,
+    price: offerPrice,
+    mrp: offerMrp,
+    discountPercent: offerMrp > 0 ? Math.round(((offerMrp - offerPrice) / offerMrp) * 100) : 0,
+    type: (["Fresh Stock", "Rescue Deal", "Clearance"].includes(offerType)
+      ? offerType
+      : "Rescue Deal") as any,
+    savings: Math.max(0, offerMrp - offerPrice),
+    availability,
+    storeId: rawOffer.storeId || raw.storeId || "main-branch",
+    storeName: rawOffer.storeName || raw.storeName || "Main Branch (Indiranagar)",
+  };
+
+  const product: MarketplaceProduct = {
+    id: productId,
+    productId,
+    name: productName,
+    subtitle: rawProduct.subtitle || `${brand} • ${unit}`,
+    brand,
+    unit,
+    category,
+    categorySlug: (rawProduct.categorySlug || "dairy") as any,
+    mrp: offerMrp,
+    rating: rawProduct.rating || 4.5,
+    reviewsCount: rawProduct.reviewsCount || 12,
+    imageUrl,
+    defaultOffer: selectedOffer,
+    allOffers: rawProduct.allOffers && Array.isArray(rawProduct.allOffers) ? rawProduct.allOffers : [selectedOffer],
+    isRescueDeal: offerType === "Rescue Deal",
+    isPopular: false,
+    isRecommended: false,
+    isClearance: offerType === "Clearance",
+    isBuyAgain: false,
+    description: rawProduct.description || "",
+  };
+
+  const rawQty = Number(raw.quantity);
+  const quantity = isNaN(rawQty) ? 1 : Math.max(1, rawQty);
+
+  return {
+    product,
+    selectedOffer,
+    quantity,
+    storeId: raw.storeId || selectedOffer.storeId,
+    storeName: raw.storeName || selectedOffer.storeName,
+  };
+}
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export function CartProvider({ children }: { children: ReactNode }) {
-  // 1. Cart Items with initial mock items from MASTER_PRODUCTS
+  // 1. Cart Items (Persisted in localStorage; safe parsing with normalization)
   const [cartItems, setCartItems] = useState<CartItem[]>(() => {
     try {
       const stored = localStorage.getItem("ern_cart_items");
       if (stored) {
-        return JSON.parse(stored);
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item, idx) => normalizeCartItem(item, idx))
+            .filter((item): item is CartItem => item !== null);
+        }
       }
     } catch (e) {
-      console.error(e);
+      console.error("Failed to load cart items from localStorage:", e);
     }
-    return [
-      {
-        product: MASTER_PRODUCTS[0], // Amul Taaza Milk 1L
-        selectedOffer: MASTER_PRODUCTS[0].defaultOffer,
-        quantity: 2,
-      },
-      {
-        product: MASTER_PRODUCTS[1], // Britannia Whole Wheat Bread 400g
-        selectedOffer: MASTER_PRODUCTS[1].defaultOffer,
-        quantity: 1,
-      },
-      {
-        product: MASTER_PRODUCTS[2], // Tropicana Orange Juice 1L
-        selectedOffer: MASTER_PRODUCTS[2].defaultOffer,
-        quantity: 1,
-      },
-    ];
+    return [];
   });
 
-  // 2. Wishlist with rich defaults for demoing saved items
+  // 2. Wishlist / Saved Items (Persisted in localStorage; default empty for new customer)
   const [wishlist, setWishlist] = useState<Set<string>>(() => {
     try {
       const stored = localStorage.getItem("ern_wishlist");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) return new Set(parsed);
+        if (Array.isArray(parsed)) return new Set(parsed);
       }
     } catch (e) {
       console.error(e);
     }
-    return new Set([
-      "prod-milk-01",
-      "prod-juice-01",
-      "prod-chips-01",
-      "prod-rice-01",
-      "prod-honey-01",
-    ]);
+    return new Set<string>();
   });
 
-  // 3. Addresses State (Persisted)
+  // 3. Saved Addresses
   const [addresses, setAddresses] = useState<SavedAddress[]>(() => {
     try {
       const stored = localStorage.getItem("ern_saved_addresses");
@@ -252,17 +338,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     } catch (e) {
       console.error(e);
     }
-    return DEFAULT_ADDRESSES;
+    return [];
   });
 
   const [selectedAddressId, setSelectedAddressId] = useState<string>(() => {
-    const defaultAddr = addresses.find((a) => a.isDefault);
-    return defaultAddr ? defaultAddr.id : addresses[0]?.id || "addr-1";
+    return addresses[0]?.id || "default-addr";
   });
 
-  const [selectedDeliveryId, setSelectedDeliveryId] =
-    useState<"standard" | "express" | "pickup">("standard");
-  const [selectedPaymentId, setSelectedPaymentId] = useState<string>("upi");
+  // 4. Delivery & Payment Selection
+  const [selectedDeliveryId, setSelectedDeliveryId] = useState<"standard" | "express" | "pickup">("standard");
+  const [selectedPaymentId, setSelectedPaymentId] = useState("upi");
+
+  // 5. Placed Order State
   const [placedOrder, setPlacedOrder] = useState<PlacedOrderData | null>(() => {
     try {
       const stored = localStorage.getItem("ern_last_placed_order");
@@ -273,9 +360,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     return null;
   });
 
+  // Animation bounce state
   const [isCartBouncing, setIsCartBouncing] = useState(false);
 
-  // Sync cart to localStorage
+  // Sync states to LocalStorage
   useEffect(() => {
     try {
       localStorage.setItem("ern_cart_items", JSON.stringify(cartItems));
@@ -284,7 +372,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [cartItems]);
 
-  // Sync wishlist to localStorage
   useEffect(() => {
     try {
       localStorage.setItem("ern_wishlist", JSON.stringify(Array.from(wishlist)));
@@ -293,7 +380,6 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [wishlist]);
 
-  // Sync addresses to localStorage
   useEffect(() => {
     try {
       localStorage.setItem("ern_saved_addresses", JSON.stringify(addresses));
@@ -302,288 +388,523 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
   }, [addresses]);
 
-  // Address helper functions
-  const addAddress = (address: Omit<SavedAddress, "id">) => {
-    const id = `addr-${Date.now()}`;
-    const newAddress: SavedAddress = {
-      ...address,
-      id,
+  // Derived Address
+  const selectedAddress = useMemo<SavedAddress>(() => {
+    const found = addresses.find((a) => a.id === selectedAddressId);
+    if (found) return found;
+    if (addresses.length > 0) return addresses[0];
+    return {
+      id: "default-addr",
+      type: "Home",
+      recipientName: "Customer",
+      tagline: "Primary Delivery Address",
+      addressLine1: "Flat 402, Green Valley Apartments",
+      addressLine2: "12th Main Road, Indiranagar",
+      city: "Bengaluru",
+      state: "Karnataka",
+      pincode: "560038",
+      phone: "+91 98765 43210",
+      isDefault: true,
     };
-    setAddresses((prev) => {
-      if (newAddress.isDefault) {
-        // Unset previous defaults
-        return [newAddress, ...prev.map((a) => ({ ...a, isDefault: false }))];
-      }
-      return [...prev, newAddress];
-    });
-    if (newAddress.isDefault || addresses.length === 0) {
-      setSelectedAddressId(id);
-    }
-  };
-
-  const updateAddress = (id: string, updated: Partial<SavedAddress>) => {
-    setAddresses((prev) =>
-      prev.map((a) => {
-        if (a.id === id) {
-          const merged = { ...a, ...updated };
-          return merged;
-        }
-        if (updated.isDefault) {
-          return { ...a, isDefault: false };
-        }
-        return a;
-      })
-    );
-    if (updated.isDefault) {
-      setSelectedAddressId(id);
-    }
-  };
-
-  const removeAddress = (id: string) => {
-    setAddresses((prev) => {
-      const filtered = prev.filter((a) => a.id !== id);
-      if (filtered.length > 0 && !filtered.some((a) => a.isDefault)) {
-        filtered[0].isDefault = true;
-      }
-      return filtered;
-    });
-    if (selectedAddressId === id) {
-      const remaining = addresses.filter((a) => a.id !== id);
-      if (remaining.length > 0) {
-        setSelectedAddressId(remaining[0].id);
-      }
-    }
-  };
-
-  const setDefaultAddress = (id: string) => {
-    setAddresses((prev) =>
-      prev.map((a) => ({
-        ...a,
-        isDefault: a.id === id,
-      }))
-    );
-    setSelectedAddressId(id);
-  };
-
-  // Calculations
-  const totalCount = useMemo(() => {
-    return cartItems.reduce((acc, item) => acc + item.quantity, 0);
-  }, [cartItems]);
-
-  const totalAmount = useMemo(() => {
-    return cartItems.reduce(
-      (acc, item) => acc + item.selectedOffer.price * item.quantity,
-      0
-    );
-  }, [cartItems]);
-
-  const totalSavings = useMemo(() => {
-    return cartItems.reduce(
-      (acc, item) => acc + item.selectedOffer.savings * item.quantity,
-      0
-    );
-  }, [cartItems]);
-
-  const originalTotal = useMemo(() => {
-    return cartItems.reduce(
-      (acc, item) => acc + item.selectedOffer.originalPrice * item.quantity,
-      0
-    );
-  }, [cartItems]);
-
-  const selectedAddress = useMemo(() => {
-    return (
-      addresses.find((a) => a.id === selectedAddressId) ||
-      addresses[0] ||
-      DEFAULT_ADDRESSES[0]
-    );
   }, [addresses, selectedAddressId]);
 
-  const selectedDelivery = useMemo(() => {
-    const opt =
-      DELIVERY_OPTIONS.find((d) => d.id === selectedDeliveryId) ||
-      DELIVERY_OPTIONS[0];
+  // Derived Delivery Option
+  const selectedDelivery = useMemo<DeliveryOption>(() => {
+    const found = DELIVERY_OPTIONS.find((d) => d.id === selectedDeliveryId);
+    return found || DELIVERY_OPTIONS[0];
+  }, [selectedDeliveryId]);
 
-    // Check if free standard delivery threshold is met
-    if (opt.id === "standard" && totalAmount >= (opt.freeThreshold || 500)) {
-      return { ...opt, fee: 0, tag: "Free (Order > ₹500)" };
-    }
-    return opt;
-  }, [selectedDeliveryId, totalAmount]);
-
-  // Actions
-  const addToCart = (product: MarketplaceProduct, offer?: ProductOffer) => {
-    const chosenOffer = offer || product.defaultOffer;
-
-    setCartItems((prev) => {
-      const existingIdx = prev.findIndex(
-        (item) =>
-          item.product.id === product.id &&
-          item.selectedOffer.id === chosenOffer.id
-      );
-      if (existingIdx > -1) {
-        return prev.map((item, i) =>
-          i === existingIdx ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      }
-      return [...prev, { product, selectedOffer: chosenOffer, quantity: 1 }];
-    });
-
+  // Cart Add / Update / Remove / Clear
+  const triggerCartBounce = () => {
     setIsCartBouncing(true);
-    setTimeout(() => setIsCartBouncing(false), 500);
+    setTimeout(() => setIsCartBouncing(false), 600);
   };
 
-  const updateQty = (idx: number, delta: number) => {
-    setCartItems((prev) =>
-      prev.map((item, i) => {
-        if (i !== idx) return item;
-        const nextQty = Math.max(1, item.quantity + delta);
-        return {
-          ...item,
-          quantity: nextQty,
-        };
-      })
-    );
-  };
+  const addToCart = useCallback(
+    (
+      product: MarketplaceProduct,
+      offer?: ProductOffer,
+      quantity = 1,
+      storeId?: string,
+      storeName?: string
+    ) => {
+      const targetOffer = offer || product.defaultOffer;
+      const effectiveStoreId = storeId || targetOffer.storeId || "main-branch";
+      const effectiveStoreName = storeName || targetOffer.storeName || getStoreDisplayName(effectiveStoreId);
 
-  const removeItem = (idx: number) => {
+      setCartItems((prev) => {
+        const existingIdx = prev.findIndex(
+          (item) =>
+            item.product.id === product.id &&
+            item.selectedOffer.id === targetOffer.id &&
+            (item.storeId === effectiveStoreId || !item.storeId)
+        );
+
+        if (existingIdx >= 0) {
+          const updated = [...prev];
+          const currentQty = updated[existingIdx].quantity;
+          const maxAvail = targetOffer.availability || 99;
+          const newQty = Math.min(maxAvail, currentQty + quantity);
+          updated[existingIdx] = {
+            ...updated[existingIdx],
+            quantity: newQty,
+            storeId: effectiveStoreId,
+            storeName: effectiveStoreName,
+          };
+          return updated;
+        } else {
+          return [
+            ...prev,
+            {
+              product,
+              selectedOffer: targetOffer,
+              quantity: Math.min(targetOffer.availability || 99, Math.max(1, quantity)),
+              storeId: effectiveStoreId,
+              storeName: effectiveStoreName,
+            },
+          ];
+        }
+      });
+      triggerCartBounce();
+    },
+    []
+  );
+
+  const updateQty = useCallback((idx: number, delta: number) => {
+    setCartItems((prev) => {
+      if (idx < 0 || idx >= prev.length) return prev;
+      const current = prev[idx];
+      const newQty = current.quantity + delta;
+      const maxAvail = current.selectedOffer.availability || 99;
+
+      if (newQty <= 0) {
+        return prev.filter((_, i) => i !== idx);
+      }
+      const updated = [...prev];
+      updated[idx] = { ...current, quantity: Math.min(maxAvail, newQty) };
+      return updated;
+    });
+  }, []);
+
+  const removeItem = useCallback((idx: number) => {
     setCartItems((prev) => prev.filter((_, i) => i !== idx));
-  };
+  }, []);
 
-  const clearCart = () => {
+  const clearCart = useCallback(() => {
     setCartItems([]);
-  };
+  }, []);
 
-  const toggleWishlist = (product: MarketplaceProduct) => {
+  // Calculated Cart Totals
+  const { totalCount, totalAmount, originalTotal, totalSavings } = useMemo(() => {
+    let count = 0;
+    let amount = 0;
+    let orig = 0;
+
+    for (const item of cartItems) {
+      if (!item) continue;
+      const qty = Math.max(1, item.quantity || 1);
+      count += qty;
+      const safeMrp = Number(item.selectedOffer?.mrp ?? item.product?.mrp ?? item.selectedOffer?.price ?? 0);
+      const safeSellingPrice = Number(item.selectedOffer?.price ?? (item.product as any)?.price ?? safeMrp);
+      const pricing = calculatePricing(safeMrp, {
+        sellingPrice: safeSellingPrice,
+      });
+      amount += pricing.sellingPrice * qty;
+      orig += pricing.mrp * qty;
+    }
+
+    const savings = Math.max(0, orig - amount);
+    return {
+      totalCount: count,
+      totalAmount: amount,
+      originalTotal: orig,
+      totalSavings: savings,
+    };
+  }, [cartItems]);
+
+  // Wishlist / Saved Items Toggle
+  const toggleWishlist = useCallback((product: MarketplaceProduct): boolean => {
+    let isAdded = false;
     setWishlist((prev) => {
       const next = new Set(prev);
       if (next.has(product.id)) {
         next.delete(product.id);
+        isAdded = false;
       } else {
         next.add(product.id);
+        isAdded = true;
       }
       return next;
     });
-  };
+    return isAdded;
+  }, []);
 
-  const removeFromWishlist = (productId: string) => {
+  const removeFromWishlist = useCallback((productId: string) => {
     setWishlist((prev) => {
       const next = new Set(prev);
       next.delete(productId);
       return next;
     });
-  };
+  }, []);
 
-  const addToWishlist = (productId: string) => {
+  const addToWishlist = useCallback((productId: string) => {
     setWishlist((prev) => {
       const next = new Set(prev);
       next.add(productId);
       return next;
     });
-  };
+  }, []);
 
-  const createOrder = (): PlacedOrderData => {
-    const randomNum = Math.floor(10000 + Math.random() * 90000);
-    const now = new Date();
-    const orderId = `ERN-2026-${randomNum}`;
+  // Address Actions
+  const addAddress = useCallback((addr: Omit<SavedAddress, "id">): SavedAddress => {
+    const newAddr: SavedAddress = {
+      ...addr,
+      id: `addr-${Date.now()}`,
+    };
+    setAddresses((prev) => {
+      if (newAddr.isDefault) {
+        return [...prev.map((a) => ({ ...a, isDefault: false })), newAddr];
+      }
+      return [...prev, newAddr];
+    });
+    setSelectedAddressId(newAddr.id);
+    return newAddr;
+  }, []);
 
-    const deliveryFee = selectedDelivery.fee;
-    const finalPaid = totalAmount + deliveryFee;
-    const paymentTitle =
-      PAYMENT_METHODS.find((p) => p.id === selectedPaymentId)?.title || "UPI";
+  const updateAddress = useCallback((id: string, updates: Partial<SavedAddress>) => {
+    setAddresses((prev) =>
+      prev.map((a) => {
+        if (a.id === id) {
+          const updated = { ...a, ...updates };
+          return updated;
+        }
+        if (updates.isDefault) {
+          return { ...a, isDefault: false };
+        }
+        return a;
+      })
+    );
+  }, []);
 
-    const order: PlacedOrderData = {
-      orderId,
+  const removeAddress = useCallback((id: string) => {
+    setAddresses((prev) => {
+      const filtered = prev.filter((a) => a.id !== id);
+      if (selectedAddressId === id && filtered.length > 0) {
+        setSelectedAddressId(filtered[0].id);
+      }
+      return filtered;
+    });
+  }, [selectedAddressId]);
+
+  const setDefaultAddress = useCallback((id: string) => {
+    setAddresses((prev) =>
+      prev.map((a) => ({ ...a, isDefault: a.id === id }))
+    );
+    setSelectedAddressId(id);
+  }, []);
+
+  // 6. Cart Validation against live store inventory, expiry and stock
+  const validateCart = useCallback((): CartValidationResult => {
+    const issues: CartValidationIssue[] = [];
+    const validItems: CartItem[] = [];
+
+    for (const item of cartItems) {
+      const storeId = item.storeId || item.selectedOffer.storeId || "main-branch";
+      const productId = item.product.productId || item.product.id;
+      const batchNo = item.selectedOffer.batchNumber;
+
+      const check = inventoryStore.validateBatchStock(
+        storeId,
+        productId,
+        batchNo,
+        item.quantity
+      );
+
+      if (check.isExpired) {
+        issues.push({
+          productId: item.product.id,
+          productName: item.product.name,
+          type: "expired",
+          message: `${item.product.name} (Batch ${batchNo}) has reached expiration. Please select another active batch.`,
+        });
+        continue;
+      }
+
+      if (check.availableQty <= 0) {
+        issues.push({
+          productId: item.product.id,
+          productName: item.product.name,
+          type: "out_of_stock",
+          message: `${item.product.name} (Batch ${batchNo}) is currently out of stock.`,
+        });
+        continue;
+      }
+
+      let targetQty = item.quantity;
+      if (targetQty > check.availableQty) {
+        targetQty = check.availableQty;
+        issues.push({
+          productId: item.product.id,
+          productName: item.product.name,
+          type: "quantity_reduced",
+          message: `Only ${check.availableQty} units available for ${item.product.name}. Quantity adjusted.`,
+          adjustedQuantity: targetQty,
+        });
+      }
+
+      validItems.push({
+        ...item,
+        quantity: targetQty,
+        selectedOffer: {
+          ...item.selectedOffer,
+          availability: check.availableQty,
+        },
+      });
+    }
+
+    if (issues.length > 0) {
+      setCartItems(validItems);
+    }
+
+    return {
+      isValid: issues.length === 0,
+      issues,
+    };
+  }, [cartItems]);
+
+  // 7. Intelligent Reorder from Past Order with Live Batch Resolution
+  const reorderFromPastOrder = useCallback((order: Order): ReorderResult => {
+    let successCount = 0;
+    let partialCount = 0;
+    let unavailableCount = 0;
+    const addedItemNames: string[] = [];
+    const partialItemNames: string[] = [];
+    const unavailableItemNames: string[] = [];
+
+    const newCartItemsToAdd: CartItem[] = [];
+    const targetStoreId = order.storeId || "main-branch";
+    const liveCatalog = inventoryStore.getMarketplaceCatalog(targetStoreId);
+
+    for (const orderItem of order.items) {
+      const liveProduct = liveCatalog.find(
+        (p) =>
+          p.id === orderItem.productId ||
+          p.productId === orderItem.productId ||
+          p.name.toLowerCase() === orderItem.name.toLowerCase()
+      );
+
+      if (!liveProduct) {
+        unavailableCount++;
+        unavailableItemNames.push(orderItem.name);
+        continue;
+      }
+
+      // Live unexpired batches with available inventory only
+      const validBatches = liveProduct.allOffers.filter((offer) => {
+        const expiry = calculateExpiryStatus(offer.expiryDate);
+        return !expiry.isExpired && offer.availability > 0;
+      });
+
+      if (validBatches.length === 0) {
+        unavailableCount++;
+        unavailableItemNames.push(`${liveProduct.name} (Out of Stock / Expired)`);
+        continue;
+      }
+
+      // Prefer matching batch, fallback to best valid unexpired batch
+      const matchedTierBatch =
+        validBatches.find((b) => b.id === (orderItem as any).batchId) ||
+        validBatches.find((b) => b.type === orderItem.batchType) ||
+        validBatches[0];
+
+      const requestedQty = Math.max(1, orderItem.quantity || 1);
+      const availableStock = matchedTierBatch.availability;
+
+      if (availableStock <= 0) {
+        unavailableCount++;
+        unavailableItemNames.push(`${liveProduct.name} (Depleted)`);
+        continue;
+      }
+
+      let fulfilledQty = requestedQty;
+      if (requestedQty > availableStock) {
+        fulfilledQty = availableStock;
+        partialCount++;
+        partialItemNames.push(`${liveProduct.name} (${fulfilledQty} of ${requestedQty} available)`);
+        successCount++;
+      } else {
+        successCount++;
+        addedItemNames.push(`${liveProduct.name} (${matchedTierBatch.type})`);
+      }
+
+      newCartItemsToAdd.push({
+        product: liveProduct,
+        selectedOffer: matchedTierBatch,
+        quantity: fulfilledQty,
+        storeId: targetStoreId,
+        storeName: order.storeName || getStoreDisplayName(targetStoreId),
+      });
+    }
+
+    if (newCartItemsToAdd.length > 0) {
+      setCartItems((prev) => {
+        const updated = [...prev];
+        for (const newItem of newCartItemsToAdd) {
+          const existingIdx = updated.findIndex(
+            (it) =>
+              it.product.id === newItem.product.id &&
+              it.selectedOffer.id === newItem.selectedOffer.id
+          );
+          if (existingIdx >= 0) {
+            updated[existingIdx].quantity = Math.min(
+              newItem.selectedOffer.availability,
+              updated[existingIdx].quantity + newItem.quantity
+            );
+          } else {
+            updated.push(newItem);
+          }
+        }
+        return updated;
+      });
+      triggerCartBounce();
+    }
+
+    const messageParts: string[] = [];
+    const fullAdds = successCount - partialCount;
+    if (fullAdds > 0) {
+      messageParts.push(`${fullAdds} item${fullAdds > 1 ? "s" : ""} added`);
+    }
+    if (partialCount > 0) {
+      messageParts.push(`${partialCount} item${partialCount > 1 ? "s" : ""} partially added (stock limited)`);
+    }
+    if (unavailableCount > 0) {
+      messageParts.push(`${unavailableCount} item${unavailableCount > 1 ? "s" : ""} unavailable`);
+    }
+
+    const message =
+      messageParts.length > 0
+        ? `${messageParts.join(", ")}.`
+        : `Items from this order are no longer available in current stock.`;
+
+    return {
+      successCount,
+      partialCount,
+      unavailableCount,
+      addedItemNames,
+      partialItemNames,
+      unavailableItemNames,
+      message,
+    };
+  }, []);
+
+  // 8. Create & Place Order with Live Inventory Stock Deductions
+  const createOrder = useCallback((): PlacedOrderData => {
+    const finalDeliveryFee =
+      selectedDelivery.freeThreshold && totalAmount >= selectedDelivery.freeThreshold
+        ? 0
+        : selectedDelivery.fee;
+
+    const totalPaid = totalAmount + finalDeliveryFee;
+    const totalUnits = cartItems.reduce((acc, it) => acc + it.quantity, 0);
+    const primaryStoreId =
+      cartItems[0]?.storeId || cartItems[0]?.selectedOffer?.storeId || "main-branch";
+    const primaryStoreName =
+      cartItems[0]?.storeName ||
+      cartItems[0]?.selectedOffer?.storeName ||
+      getStoreDisplayName(primaryStoreId);
+
+    const newOrderData: PlacedOrderData = {
+      orderId: `ERN-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
       items: [...cartItems],
-      totalUnits: totalCount,
+      totalUnits,
       subtotal: totalAmount,
-      deliveryFee,
+      deliveryFee: finalDeliveryFee,
       totalSavings,
-      totalPaid: finalPaid,
+      totalPaid,
       address: selectedAddress,
       deliveryOption: selectedDelivery,
-      paymentMethod: paymentTitle,
-      placedAt: now.toLocaleString("en-IN", {
-        dateStyle: "medium",
-        timeStyle: "short",
+      paymentMethod:
+        PAYMENT_METHODS.find((p) => p.id === selectedPaymentId)?.title || "UPI",
+      placedAt: new Date().toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "numeric",
+        minute: "numeric",
+        hour12: true,
       }),
       estimatedDelivery:
-        selectedDelivery.id === "pickup"
-          ? "Today within 1 hour"
-          : selectedDelivery.id === "express"
-          ? "Tomorrow by 2:00 PM"
-          : "2–3 business days",
+        selectedDelivery.id === "express"
+          ? "Today within 3 hours"
+          : selectedDelivery.id === "pickup"
+          ? "Ready for pickup in 1 hour"
+          : "Tomorrow by 2:00 PM",
     };
 
-    setPlacedOrder(order);
+    setPlacedOrder(newOrderData);
     try {
-      localStorage.setItem("ern_last_placed_order", JSON.stringify(order));
+      localStorage.setItem("ern_last_placed_order", JSON.stringify(newOrderData));
     } catch (e) {
       console.error(e);
     }
 
-    // Build a full Order and prepend to stored orders list for the My Orders page
-    const orderItems: OrderItem[] = cartItems.map((ci, index) => ({
-      id: `item-placed-${index}-${Date.now()}`,
-      productId: ci.product.productId || ci.product.id,
-      name: ci.product.name,
-      subtitle: ci.product.subtitle,
-      brand: ci.product.brand,
-      category: ci.product.category,
-      imageUrl: ci.product.imageUrl,
-      unit: ci.product.unit,
-      quantity: ci.quantity,
-      batchType:
-        ci.selectedOffer.type === "Clearance"
-          ? "Clearance"
-          : ci.selectedOffer.type === "Fresh Stock"
-          ? "Fresh Stock"
-          : "Rescue Deal",
-      shelfLifeAtPurchase: ci.selectedOffer.expiryText,
-      daysRemaining: ci.selectedOffer.daysRemaining,
-      originalPrice: ci.selectedOffer.originalPrice,
-      paidPrice: ci.selectedOffer.price,
-      savings: ci.selectedOffer.savings * ci.quantity,
-    }));
+    // Deduct stock from exact store and batch in inventoryStore
+    for (const it of cartItems) {
+      const itemStoreId = it.storeId || it.selectedOffer.storeId || primaryStoreId;
+      const prodId = it.product.productId || it.product.id;
+      const batchNumber = it.selectedOffer.batchNumber;
+      inventoryStore.decrementBatchStock(itemStoreId, prodId, batchNumber, it.quantity);
+    }
 
-    const fullOrder: Order = {
-      id: orderId,
-      orderDate: now.toLocaleString("en-IN", {
-        dateStyle: "medium",
-        timeStyle: "short",
-      }),
-      orderDateSimple: now.toLocaleDateString("en-IN", {
-        day: "2-digit",
+    // Persist into all orders history
+    const existingOrders = getStoredOrders();
+    const historyOrder: Order = {
+      id: newOrderData.orderId,
+      storeId: primaryStoreId,
+      storeName: primaryStoreName,
+      orderDate: newOrderData.placedAt,
+      orderDateSimple: new Date().toLocaleDateString("en-IN", {
+        day: "numeric",
         month: "short",
         year: "numeric",
       }),
-      status: "Out for Delivery",
-      paymentStatus: `Paid via ${selectedPaymentId.toUpperCase()}`,
-      paymentMethod: paymentTitle,
-      deliveryMethod: selectedDelivery.title,
-      deliveryPartner: "BlueDart Express / ERN Fleet",
-      trackingId: `TRK-ERN-${randomNum}`,
-      estimatedDelivery: order.estimatedDelivery,
-      shippingAddress: {
-        recipientName: selectedAddress.recipientName,
-        tagline: selectedAddress.tagline,
-        type: selectedAddress.type,
-        addressLine1: selectedAddress.addressLine1,
-        addressLine2: selectedAddress.addressLine2,
-        city: selectedAddress.city,
-        state: selectedAddress.state,
-        pincode: selectedAddress.pincode,
-        phone: selectedAddress.phone,
-      },
-      items: orderItems,
-      itemsSubtotal: totalAmount + totalSavings,
-      ernDiscount: totalSavings,
-      deliveryFee,
+      status: "Processing",
+      paymentStatus: `Paid via ${newOrderData.paymentMethod}`,
+      paymentMethod: newOrderData.paymentMethod,
+      deliveryMethod: newOrderData.deliveryOption.title,
+      deliveryPartner: "ERN Local Hub Dispatch",
+      trackingId: `TRK-ERN-${Math.floor(10000 + Math.random() * 90000)}`,
+      estimatedDelivery: newOrderData.estimatedDelivery,
+      shippingAddress: newOrderData.address,
+      items: newOrderData.items.map((it, idx) => ({
+        id: `item-${Date.now()}-${idx}`,
+        productId: it.product.id,
+        name: it.product.name,
+        subtitle: it.product.subtitle,
+        brand: it.product.brand,
+        category: it.product.category,
+        imageUrl: it.product.imageUrl,
+        unit: it.product.unit,
+        quantity: it.quantity,
+        batchType: it.selectedOffer.type === "Expired" ? "Rescue Deal" : it.selectedOffer.type,
+        batchNumber: it.selectedOffer.batchNumber,
+        storeId: it.storeId || it.selectedOffer.storeId || primaryStoreId,
+        storeName: it.storeName || it.selectedOffer.storeName || primaryStoreName,
+        expiryDate: it.selectedOffer.expiryDate,
+        shelfLifeAtPurchase: it.selectedOffer.expiryText || "5 days left",
+        daysRemaining: it.selectedOffer.daysRemaining || 5,
+        originalPrice: it.selectedOffer.mrp || it.product.mrp,
+        paidPrice: it.selectedOffer.price,
+        savings: (it.selectedOffer.savings || 0) * it.quantity,
+      })),
+      itemsSubtotal: newOrderData.subtotal,
+      ernDiscount: newOrderData.totalSavings,
+      deliveryFee: newOrderData.deliveryFee,
       taxes: 0,
-      totalPaid: finalPaid,
-      totalSavings,
-      productsRescued: totalCount,
-      wastePreventedKg: Number((totalCount * 0.25).toFixed(1)),
+      totalPaid: newOrderData.totalPaid,
+      totalSavings: newOrderData.totalSavings,
+      productsRescued: totalUnits,
+      wastePreventedKg: Number((totalUnits * 0.4).toFixed(1)),
       timeline: [
         {
           id: "step-1",
@@ -591,53 +912,34 @@ export function CartProvider({ children }: { children: ReactNode }) {
           timestamp: "Just Now",
           completed: true,
           current: false,
-          locationNote: "Authenticated at ERN Hub",
+          locationNote: `Order confirmed at ${primaryStoreName}`,
         },
         {
           id: "step-2",
-          title: "Order Confirmed",
-          timestamp: "Just Now",
-          completed: true,
-          current: false,
-          locationNote: "Batch inventory reserved",
-        },
-        {
-          id: "step-3",
-          title: "Packed",
-          timestamp: "Estimated today",
+          title: "Allocating Batch Stock",
+          timestamp: "In Progress",
           completed: false,
           current: true,
-          locationNote: "Central Warehouse Dock 4",
-        },
-        {
-          id: "step-4",
-          title: "Dispatched",
-          timestamp: "Estimated tomorrow",
-          completed: false,
-          current: false,
-        },
-        {
-          id: "step-5",
-          title: "Out for Delivery",
-          timestamp: "Estimated soon",
-          completed: false,
-          current: false,
-        },
-        {
-          id: "step-6",
-          title: "Delivered",
-          timestamp: order.estimatedDelivery,
-          completed: false,
-          current: false,
+          locationNote: "Exact batch items reserved and deducted from inventory",
         },
       ],
     };
 
-    const currentOrders = getStoredOrders();
-    saveStoredOrders([fullOrder, ...currentOrders]);
+    saveStoredOrders([historyOrder, ...existingOrders]);
 
-    return order;
-  };
+    // Clear active cart after successful order creation
+    clearCart();
+
+    return newOrderData;
+  }, [
+    cartItems,
+    selectedDelivery,
+    totalAmount,
+    totalSavings,
+    selectedAddress,
+    selectedPaymentId,
+    clearCart,
+  ]);
 
   return (
     <CartContext.Provider
@@ -651,11 +953,16 @@ export function CartProvider({ children }: { children: ReactNode }) {
         totalAmount,
         totalSavings,
         originalTotal,
+        formattedTotalAmount: formatINR(totalAmount),
+        formattedTotalSavings: formatINR(totalSavings),
+        formattedOriginalTotal: formatINR(originalTotal),
         wishlist,
         toggleWishlist,
         removeFromWishlist,
         addToWishlist,
         isCartBouncing,
+        validateCart,
+        reorderFromPastOrder,
         addresses,
         selectedAddressId,
         setSelectedAddressId,
