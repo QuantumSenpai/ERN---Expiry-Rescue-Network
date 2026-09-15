@@ -4,9 +4,12 @@
 require_once __DIR__ . '/jwt.php';
 
 
-$allowedOrigin = getenv('CORS_ALLOWED_ORIGIN');
-if (!$allowedOrigin || $allowedOrigin === '') {
-    $allowedOrigin = '*';
+$allowedOrigin = getenv('CORS_ALLOWED_ORIGIN') ?: '*';
+$requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if ($requestOrigin !== '') {
+    if ($allowedOrigin === '*' || $requestOrigin === $allowedOrigin || $requestOrigin === 'http://localhost:5173' || $requestOrigin === 'http://127.0.0.1:5173') {
+        $allowedOrigin = $requestOrigin;
+    }
 }
 
 header("Access-Control-Allow-Origin: {$allowedOrigin}");
@@ -101,21 +104,28 @@ function require_auth(): array {
     return $payload;
 }
 
+function normalize_role(?string $role): string {
+    $r = strtolower(trim($role ?? ''));
+    if ($r === 'staff' || $r === 'donor' || $r === 'retailer') {
+        return 'staff';
+    }
+    if ($r === 'user' || $r === 'buyer' || $r === 'customer') {
+        return 'user';
+    }
+    return 'admin';
+}
+
 function require_role($roles): array {
     $user = require_auth();
     $allowed = is_array($roles) ? $roles : [$roles];
 
-
+    $normalizedUserRole = normalize_role($user['role'] ?? '');
     $normalizedAllowed = [];
     foreach ($allowed as $r) {
-        $normalizedAllowed[] = $r;
-        if ($r === 'donor') $normalizedAllowed[] = 'retailer';
-        if ($r === 'retailer') $normalizedAllowed[] = 'donor';
-        if ($r === 'buyer') $normalizedAllowed[] = 'customer';
-        if ($r === 'customer') $normalizedAllowed[] = 'buyer';
+        $normalizedAllowed[] = normalize_role((string)$r);
     }
 
-    if (!in_array($user['role'], $normalizedAllowed, true)) {
+    if (!in_array($normalizedUserRole, $normalizedAllowed, true)) {
         send_error("FORBIDDEN", "You do not have permission to perform this action.", 403);
     }
 

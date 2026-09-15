@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   ClipboardList,
   ShieldAlert,
@@ -6,7 +6,9 @@ import {
   UserCog,
   Search,
   X,
+  RefreshCw,
 } from "lucide-react";
+import { api, type ApiAuditLog } from "@/lib/api";
 
 type LogSeverity = "Info" | "Warning" | "Critical";
 
@@ -58,10 +60,40 @@ const SEVERITY_STYLES: Record<LogSeverity, string> = {
 };
 
 export default function AdminAuditLogs() {
-  const [logs] = useState(MOCK_LOGS);
+  const [logs, setLogs] = useState<AuditLog[]>(MOCK_LOGS);
+  const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [severityFilter, setSeverityFilter] = useState<LogSeverity | "All">("All");
   const [selected, setSelected] = useState<AuditLog | null>(null);
+
+  const fetchLogs = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.admin.allAuditLogs();
+      if (data && data.length > 0) {
+        setLogs(
+          data.map((l) => ({
+            id: l.log_code,
+            actor: l.actor,
+            action: l.action,
+            entity: l.entity,
+            timestamp: l.timestamp.replace("T", " ").slice(0, 16),
+            severity: (l.severity === "Critical" ? "Critical" : l.severity === "High" || l.severity === "Medium" ? "Warning" : "Info") as LogSeverity,
+            ip: l.ip_address || "127.0.0.1",
+            details: l.details || undefined,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load audit logs:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const counts = useMemo(
     () => ({

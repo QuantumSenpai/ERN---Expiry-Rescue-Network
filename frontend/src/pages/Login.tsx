@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Mail,
@@ -10,6 +10,7 @@ import {
   Sun,
   Moon,
   AlertTriangle,
+  ShieldCheck,
 } from "lucide-react";
 import {
   FaBarcode,
@@ -20,14 +21,30 @@ import {
   FaCircle,
 } from "react-icons/fa6";
 import BrandLogo from "@/components/BrandLogo";
-import { useAuth, getRoleHomeRoute } from "@/context/AuthContext";
+import { useAuth, getRoleHomeRoute, normalizeRole } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 
-export default function Login() {
-  const { login } = useAuth();
+interface LoginProps {
+  defaultPortal?: "user" | "staff" | "admin";
+}
+
+export default function Login({ defaultPortal }: LoginProps = {}) {
+  const { login, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+
+  const portalParam = searchParams.get("portal") || searchParams.get("role");
+  const initialPortal: "user" | "staff" | "admin" =
+    defaultPortal ||
+    (portalParam === "admin"
+      ? "admin"
+      : portalParam === "staff" || portalParam === "retailer" || portalParam === "donor"
+      ? "staff"
+      : "user");
+
+  const [activePortal, setActivePortal] = useState<"user" | "staff" | "admin">(initialPortal);
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +53,24 @@ export default function Login() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (portalParam === "admin") {
+      setActivePortal("admin");
+    } else if (portalParam === "staff" || portalParam === "retailer" || portalParam === "donor") {
+      setActivePortal("staff");
+    } else if (portalParam === "user" || portalParam === "customer" || portalParam === "buyer") {
+      setActivePortal("user");
+    }
+  }, [portalParam]);
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem("ern_auth_notice");
+    if (notice) {
+      setErrorMessage(notice);
+      sessionStorage.removeItem("ern_auth_notice");
+    }
+  }, []);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,13 +86,26 @@ export default function Login() {
 
     try {
       const loggedUser = await login({ email: cleanEmail, password });
-      const targetRedirect = getRoleHomeRoute(loggedUser.role);
+      const userNorm = normalizeRole(loggedUser.role);
+
+      if (userNorm !== activePortal) {
+        logout();
+        setErrorMessage("Invalid email, password, or unauthorized for the selected portal.");
+        return;
+      }
+
+      const targetRedirect = getRoleHomeRoute(userNorm);
       navigate(targetRedirect);
     } catch (err: unknown) {
       if (err instanceof Error) {
-        setErrorMessage(err.message);
+        const msg = err.message.toLowerCase();
+        if (msg.includes("role") || msg.includes("unauthorized") || msg.includes("invalid email") || msg.includes("credentials")) {
+          setErrorMessage("Invalid email, password, or unauthorized for the selected portal.");
+        } else {
+          setErrorMessage(err.message);
+        }
       } else {
-        setErrorMessage("Authentication failed. Please verify your credentials.");
+        setErrorMessage("Invalid email, password, or unauthorized for the selected portal.");
       }
     } finally {
       setIsLoading(false);
@@ -228,21 +276,87 @@ export default function Login() {
               className="w-full max-w-[440px] bg-card border border-border rounded-2xl sm:rounded-[32px] p-7 sm:p-8 space-y-6 shadow-none"
             >
               
+              {/* 3-Way Portal Switcher */}
+              <div className="flex items-center p-1 rounded-full bg-secondary/80 border border-border text-xs font-mono">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivePortal("user");
+                    setErrorMessage(null);
+                  }}
+                  className={cn(
+                    "flex-1 py-1.5 px-2.5 rounded-full font-bold transition-all cursor-pointer text-center",
+                    activePortal === "user"
+                      ? "bg-card text-foreground shadow-xs border border-border/50"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  User
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivePortal("staff");
+                    setErrorMessage(null);
+                  }}
+                  className={cn(
+                    "flex-1 py-1.5 px-2.5 rounded-full font-bold transition-all cursor-pointer text-center",
+                    activePortal === "staff"
+                      ? "bg-card text-foreground shadow-xs border border-border/50"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  Staff
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActivePortal("admin");
+                    setErrorMessage(null);
+                  }}
+                  className={cn(
+                    "flex-1 py-1.5 px-2.5 rounded-full font-bold transition-all cursor-pointer text-center flex items-center justify-center gap-1",
+                    activePortal === "admin"
+                      ? "bg-card text-foreground shadow-xs border border-border/50"
+                      : "text-muted-foreground hover:text-foreground"
+                  )}
+                >
+                  <ShieldCheck className="size-3.5 text-accent" />
+                  <span>Admin</span>
+                </button>
+              </div>
+
               <div className="space-y-1.5">
                 <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-secondary text-foreground text-xs font-mono font-bold uppercase">
-                  <span>Authorized Portal</span>
+                  {activePortal === "admin" ? (
+                    <>
+                      <ShieldCheck className="size-3 text-accent" />
+                      <span>Enterprise Admin Portal</span>
+                    </>
+                  ) : activePortal === "staff" ? (
+                    <span>Facility Staff Portal</span>
+                  ) : (
+                    <span>Community User Portal</span>
+                  )}
                 </div>
 
                 <h2 className="font-display text-2xl sm:text-3xl font-[400] text-foreground tracking-[-0.02em] leading-tight pt-1">
-                  Sign in to ERN
+                  {activePortal === "admin"
+                    ? "Admin Sign In"
+                    : activePortal === "staff"
+                    ? "Staff Sign In"
+                    : "User Sign In"}
                 </h2>
 
                 <p className="text-xs text-muted-foreground font-body">
-                  Access your inventory intelligence and rescue portal.
+                  {activePortal === "admin"
+                    ? "Access system telemetry, multi-facility compliance, and global governance controls."
+                    : activePortal === "staff"
+                    ? "Access facility inventory intelligence, batch intake, and dynamic markdown controls."
+                    : "Access food rescue marketplace, lot reservations, and distribution orders."}
                 </p>
               </div>
 
-              
               {errorMessage && (
                 <div className="p-3.5 rounded-xl bg-destructive/10 border border-destructive/20 text-destructive text-xs font-mono flex items-start gap-2.5 animate-in fade-in">
                   <AlertTriangle className="size-4 shrink-0 mt-0.5" />
@@ -250,9 +364,7 @@ export default function Login() {
                 </div>
               )}
 
-              
               <form onSubmit={handleLoginSubmit} className="space-y-4">
-                
                 <div className="space-y-1.5">
                   <label className="block text-xs font-mono uppercase text-muted-foreground font-bold">
                     Email address
@@ -266,7 +378,13 @@ export default function Login() {
                     />
                     <input
                       type="email"
-                      placeholder="name@organization.com"
+                      placeholder={
+                        activePortal === "admin"
+                          ? "admin@ern-network.com"
+                          : activePortal === "staff"
+                          ? "metro.supermarket@ern-network.com"
+                          : "priya.sharma@example.com"
+                      }
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       onFocus={() => setFocusedInput("email")}
@@ -325,6 +443,13 @@ export default function Login() {
                       Remember this workstation
                     </span>
                   </label>
+
+                  <a
+                    href="mailto:support@ern-network.com?subject=ERN%20Account%20Support%20Request"
+                    className="text-xs font-mono text-muted-foreground hover:text-foreground hover:underline transition-colors"
+                  >
+                    Need help? Contact support
+                  </a>
                 </div>
 
                 
@@ -363,12 +488,37 @@ export default function Login() {
               </form>
 
               
-              <div className="text-center text-xs text-muted-foreground font-body pt-2 border-t border-border">
-                Need an organizational account?{" "}
-                <Link to="/signup" className="text-foreground hover:underline font-bold">
-                  Register here
-                </Link>
-              </div>
+              {activePortal === "admin" ? (
+                <div className="text-center text-xs text-muted-foreground font-mono pt-3 border-t border-border space-y-1.5">
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-foreground flex items-center justify-center gap-1">
+                    <ShieldCheck className="size-3.5 text-accent" />
+                    <span>Authorized Administrative Accounts</span>
+                  </p>
+                  <p className="text-[10.5px]">
+                    <code className="bg-secondary px-1.5 py-0.5 rounded text-foreground">admin@ern-network.com</code> • <code className="bg-secondary px-1.5 py-0.5 rounded text-foreground">dev-admin@ern-network.com</code>
+                  </p>
+                  <p className="text-[11px] pt-1">
+                    Need new admin clearance?{" "}
+                    <Link to="/signup?role=admin" className="text-foreground hover:underline font-bold">
+                      Admin Registration
+                    </Link>
+                  </p>
+                </div>
+              ) : activePortal === "staff" ? (
+                <div className="text-center text-xs text-muted-foreground font-body pt-2 border-t border-border">
+                  Need a store or facility staff account?{" "}
+                  <Link to="/signup?role=staff" className="text-foreground hover:underline font-bold">
+                    Register Staff Account
+                  </Link>
+                </div>
+              ) : (
+                <div className="text-center text-xs text-muted-foreground font-body pt-2 border-t border-border">
+                  Need a community or buyer account?{" "}
+                  <Link to="/signup?role=user" className="text-foreground hover:underline font-bold">
+                    Register User Account
+                  </Link>
+                </div>
+              )}
             </motion.div>
           </div>
         </div>

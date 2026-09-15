@@ -26,7 +26,10 @@ VALUES
 
   -- Unverified Registrations (For Admin Moderation Testing)
   (7, 'Corner Fresh Bakes', 'donor', NULL, 'fresh.bakery@example.com', '$2y$10$xIErdiNn2ntiqtiC0IDyw.POBNsLXi6IrkqZunCTIebdnvPstzYju', FALSE, NOW() - INTERVAL '2 days'),
-  (8, 'Arjun Mehta', 'buyer', 'individual', 'arjun.mehta@example.com', '$2y$10$xIErdiNn2ntiqtiC0IDyw.POBNsLXi6IrkqZunCTIebdnvPstzYju', FALSE, NOW() - INTERVAL '1 day');
+  (8, 'Arjun Mehta', 'buyer', 'individual', 'arjun.mehta@example.com', '$2y$10$xIErdiNn2ntiqtiC0IDyw.POBNsLXi6IrkqZunCTIebdnvPstzYju', FALSE, NOW() - INTERVAL '1 day'),
+
+  -- Developer / Documentation Admin (Identical admin permissions)
+  (9, 'Developer Admin (Docs & Verification)', 'admin', NULL, 'dev-admin@ern-network.com', '$2y$10$pAudOw1tfSapJzXK99.t0.rmUldsRbD9KEvHb1VvV4YyQ53uRWU2y', TRUE, NOW());
 
 -- Reset identity sequence for users
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));

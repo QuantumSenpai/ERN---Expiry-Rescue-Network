@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Flag,
   Search,
@@ -7,7 +7,9 @@ import {
   CheckCircle2,
   ArrowUpCircle,
   MessageSquareWarning,
+  RefreshCw,
 } from "lucide-react";
+import { api, type ApiModerationCase } from "@/lib/api";
 
 type CaseStatus = "Open" | "Under Investigation" | "Resolved" | "Escalated";
 type CaseType = "Listing Dispute" | "User Report" | "Fraud Flag" | "Quality Complaint";
@@ -61,11 +63,41 @@ const STATUS_STYLES: Record<CaseStatus, string> = {
 };
 
 export default function AdminModeration() {
-  const [cases, setCases] = useState(MOCK_CASES);
+  const [cases, setCases] = useState<ModerationCase[]>(MOCK_CASES);
+  const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<CaseStatus | "All">("All");
   const [selected, setSelected] = useState<ModerationCase | null>(null);
   const [resolutionDraft, setResolutionDraft] = useState("");
+
+  const fetchCases = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.admin.allModeration();
+      if (data && data.length > 0) {
+        setCases(
+          data.map((m) => ({
+            id: m.case_code,
+            type: m.type as CaseType,
+            subject: m.subject,
+            reportedBy: m.reported_by,
+            filedDate: m.filed_date,
+            status: m.status as CaseStatus,
+            description: m.description,
+            resolution: m.resolution || undefined,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load moderation cases:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCases();
+  }, [fetchCases]);
 
   const counts = useMemo(
     () => ({
@@ -89,15 +121,20 @@ export default function AdminModeration() {
     [cases, search, statusFilter]
   );
 
-  const updateStatus = (id: string, status: CaseStatus) => {
-    setCases((prev) =>
-      prev.map((c) =>
-        c.id === id ? { ...c, status, resolution: resolutionDraft || c.resolution } : c
-      )
-    );
-    setSelected((prev) =>
-      prev ? { ...prev, status, resolution: resolutionDraft || prev.resolution } : prev
-    );
+  const updateStatus = async (id: string, status: CaseStatus) => {
+    try {
+      await api.admin.updateModerationStatus(0, status, resolutionDraft, id);
+      setCases((prev) =>
+        prev.map((c) =>
+          c.id === id ? { ...c, status, resolution: resolutionDraft || c.resolution } : c
+        )
+      );
+      setSelected((prev) =>
+        prev ? { ...prev, status, resolution: resolutionDraft || prev.resolution } : prev
+      );
+    } catch (err) {
+      console.error("Failed to persist dispute status:", err);
+    }
   };
 
   const kpis = [

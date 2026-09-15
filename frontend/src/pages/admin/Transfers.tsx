@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   ArrowLeftRight,
   Truck,
@@ -6,8 +6,12 @@ import {
   Clock,
   Search,
   X,
+  RefreshCw,
+  Check,
 } from "lucide-react";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import { api, type ApiTransfer } from "@/lib/api";
+import { useToast } from "@/context/ToastContext";
 
 type TransferStatus =
   | "Pending"
@@ -52,10 +56,58 @@ const STATUS_STYLE: Record<TransferStatus, string> = {
 };
 
 export default function AdminTransfers() {
-  const [transfers] = useState<Transfer[]>(MOCK_TRANSFERS);
+  const { showToast } = useToast();
+  const [transfers, setTransfers] = useState<Transfer[]>(MOCK_TRANSFERS);
+  const [isLoading, setIsLoading] = useState(false);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("All");
   const [activeTransfer, setActiveTransfer] = useState<Transfer | null>(null);
+
+  const fetchTransfers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.admin.allTransfers();
+      if (data && data.length > 0) {
+        setTransfers(
+          data.map((t) => ({
+            id: t.transfer_code,
+            source: t.source_location,
+            destination: t.destination,
+            product: t.product_name,
+            quantity: t.quantity,
+            assignedTo: t.assigned_to || "Unassigned",
+            status: t.status as TransferStatus,
+            createdDate: t.created_date,
+            expectedDelivery: t.expected_delivery || "TBD",
+            completedDate: t.completed_date || undefined,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load transfers from API:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTransfers();
+  }, [fetchTransfers]);
+
+  const handleStatusUpdate = async (transferId: string, nextStatus: TransferStatus) => {
+    try {
+      await api.admin.updateTransferStatus(0, nextStatus, transferId);
+      showToast(`Transfer ${transferId} updated to ${nextStatus}.`);
+      setTransfers((prev) =>
+        prev.map((t) => (t.id === transferId ? { ...t, status: nextStatus } : t))
+      );
+      if (activeTransfer && activeTransfer.id === transferId) {
+        setActiveTransfer((prev) => (prev ? { ...prev, status: nextStatus } : null));
+      }
+    } catch (err: unknown) {
+      showToast(err instanceof Error ? err.message : "Failed to update transfer.", "error");
+    }
+  };
 
   const totalCount = transfers.length;
   const inTransitCount = transfers.filter((t) => t.status === "In Transit" || t.status === "Picked Up").length;
@@ -280,10 +332,29 @@ export default function AdminTransfers() {
               </div>
             </div>
 
-            <div className="p-4 border-t border-border flex justify-end">
+            <div className="p-4 border-t border-border flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {activeTransfer.status !== "Delivered" && activeTransfer.status !== "Cancelled" && (
+                  <button
+                    onClick={() => handleStatusUpdate(activeTransfer.id, "Delivered")}
+                    className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white text-xs uppercase font-bold cursor-pointer"
+                  >
+                    Mark Delivered
+                  </button>
+                )}
+                {activeTransfer.status === "Pending" && (
+                  <button
+                    onClick={() => handleStatusUpdate(activeTransfer.id, "In Transit")}
+                    className="px-3.5 py-1.5 rounded-full bg-primary text-primary-foreground text-xs uppercase font-bold cursor-pointer"
+                  >
+                    Dispatch
+                  </button>
+                )}
+              </div>
+
               <button
                 onClick={() => setActiveTransfer(null)}
-                className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer"
+                className="px-4 py-2 rounded-full bg-secondary hover:bg-secondary/80 text-foreground uppercase font-bold cursor-pointer text-xs"
               >
                 Close
               </button>

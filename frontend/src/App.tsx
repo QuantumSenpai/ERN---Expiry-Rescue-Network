@@ -27,6 +27,7 @@ import Login from "@/pages/Login";
 import Signup from "@/pages/Signup";
 import PrivacyPolicy from "@/pages/PrivacyPolicy";
 import UnderConstruction from "@/pages/UnderConstruction";
+import PrivacyNotice from "@/components/PrivacyNotice";
 
 import MarketplaceHome from "@/pages/customer/MarketplaceHome";
 import Browse from "@/pages/customer/Browse";
@@ -62,6 +63,7 @@ const Suppliers = lazy(() => import("@/pages/retailer/Suppliers"));
 const RetailerUsers = lazy(() => import("@/pages/retailer/RetailerUsers"));
 
 const AdminDashboard = lazy(() => import("@/pages/admin/Dashboard"));
+const AdminOrders = lazy(() => import("@/pages/admin/Orders"));
 const AdminUsers = lazy(() => import("@/pages/admin/Users"));
 const AdminLocations = lazy(() => import("@/pages/admin/Locations"));
 const AdminOrganization = lazy(() => import("@/pages/admin/Organization"));
@@ -123,6 +125,14 @@ function AnimatedRoutes() {
               element={
                 <PageTransition>
                   <Login />
+                </PageTransition>
+              }
+            />
+            <Route
+              path="/admin/login"
+              element={
+                <PageTransition>
+                  <Login defaultPortal="admin" />
                 </PageTransition>
               }
             />
@@ -258,6 +268,7 @@ function AnimatedRoutes() {
             >
               <Route index element={<Navigate to="/admin/dashboard" replace />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="orders" element={<AdminOrders />} />
               <Route path="users" element={<AdminUsers />} />
               <Route path="inventory" element={<Inventory />} />
               <Route path="locations" element={<AdminLocations />} />
@@ -298,6 +309,7 @@ function AnimatedRoutes() {
           </Routes>
         </AnimatePresence>
       </Suspense>
+      <PrivacyNotice />
     </>
   );
 }

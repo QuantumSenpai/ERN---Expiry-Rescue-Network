@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState } from "react";
 import {
   FaBoxesStacked,
   FaWaveSquare,
@@ -67,7 +67,7 @@ export default function HowItWorks() {
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl text-foreground font-medium tracking-[-0.02em] leading-[1.15] font-display">
             <span className="font-sans block">From inventory</span>
-            <span className="font-script text-4xl sm:text-5xl md:text-6xl text-foreground dark:text-accent block font-bold mt-1">
+            <span className="font-script text-4xl sm:text-5xl md:text-6xl text-foreground dark:text-primary block font-bold mt-1">
               to automated action.
             </span>
           </h2>
@@ -113,7 +113,7 @@ export default function HowItWorks() {
                     </span>
                   </div>
 
-                  <div className="size-11 rounded-full bg-secondary flex items-center justify-center text-foreground dark:text-accent my-6 transition-transform duration-200 group-hover:scale-105">
+                  <div className="size-11 rounded-full bg-secondary flex items-center justify-center text-foreground dark:text-primary my-6 transition-transform duration-200 group-hover:scale-105">
                     <Icon className="size-5" />
                   </div>
 
@@ -130,7 +130,7 @@ export default function HowItWorks() {
                   {item.href ? (
                     <a
                       href={item.href}
-                      className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-foreground dark:text-accent hover:underline"
+                      className="inline-flex items-center gap-1.5 text-xs font-mono font-bold text-foreground dark:text-primary hover:underline"
                     >
                       <span>{item.actionLabel}</span>
                       <FaArrowRight className="size-3 transition-transform duration-200 group-hover:translate-x-1" />

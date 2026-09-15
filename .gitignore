@@ -24,3 +24,9 @@ pnpm-debug.log*
 Thumbs.db
 .vscode/
 .idea/
+
+# Local diagnostic and seed scripts (never commit passwords)
+backend/scripts/
+backend/check_*.php
+scripts/local-only/
+scratch/

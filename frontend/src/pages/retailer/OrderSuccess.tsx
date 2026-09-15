@@ -1,5 +1,5 @@
-﻿import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
   CheckCircle2,
@@ -13,11 +13,14 @@ import {
   Clock,
   Leaf,
   X,
+  AlertTriangle,
 } from "lucide-react";
 import { useCart } from "@/context/CartContext";
 
 export default function RetailerOrderSuccess() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const stateNotice = (location.state as { notice?: string } | null)?.notice;
   const { placedOrder } = useCart();
   const [isTrackingModalOpen, setIsTrackingModalOpen] = useState(false);
 
@@ -89,6 +92,23 @@ export default function RetailerOrderSuccess() {
             </p>
           </motion.div>
         </div>
+
+        {stateNotice && (
+          <motion.div
+            role="alert"
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-2xl border border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400 flex items-start gap-3.5 text-xs font-sans shadow-sm"
+          >
+            <AlertTriangle className="size-5 shrink-0 mt-0.5 text-amber-500" />
+            <div className="flex-1 space-y-1">
+              <h4 className="font-mono text-xs font-bold uppercase tracking-wider">
+                Cart Lots Notice
+              </h4>
+              <p className="leading-relaxed">{stateNotice}</p>
+            </div>
+          </motion.div>
+        )}
 
         {/* Order ID & Timing Bar */}
         <motion.div

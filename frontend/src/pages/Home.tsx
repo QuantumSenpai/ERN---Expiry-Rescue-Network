@@ -7,6 +7,7 @@ import StatsBand from "@/components/StatsBand";
 import TestimonialCarousel from "@/components/TestimonialCarousel";
 import FinalCta from "@/components/FinalCta";
 import TeamSection from "@/components/TeamSection";
+import FaqSection from "@/components/FaqSection";
 import ScrollReveal from "@/components/ScrollReveal";
 import BulkActionsModal from "@/components/BulkActionsModal";
 import { Sparkles, Search } from "lucide-react";
@@ -240,7 +241,10 @@ export default function Home() {
       {/* ─── 7. FINAL CTA BANNER ─── */}
       <FinalCta />
 
-      {/* ─── 8. FOOTER ─── */}
+      {/* ─── 8. FREQUENTLY ASKED QUESTIONS (FAQ) ─── */}
+      <FaqSection />
+
+      {/* ─── 9. FOOTER ─── */}
       <Footer />
 
       {/* External Modals */}

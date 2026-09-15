@@ -1,4 +1,4 @@
-﻿import AnimatedNumber from "@/components/AnimatedNumber";
+import AnimatedNumber from "@/components/AnimatedNumber";
 import ScrollReveal from "@/components/ScrollReveal";
 import { Boxes, Clock, AlertTriangle, ShieldCheck } from "lucide-react";
 
@@ -39,7 +39,7 @@ export default function StatsBand() {
           </div>
           <h2 className="text-3xl sm:text-4xl md:text-5xl font-medium text-foreground leading-[1.15] tracking-[-0.02em] font-display">
             <span className="font-sans block">Inventory intelligence,</span>
-            <span className="font-script text-4xl sm:text-5xl md:text-6xl text-foreground dark:text-accent block -mt-1 font-bold">
+            <span className="font-script text-4xl sm:text-5xl md:text-6xl text-foreground dark:text-primary block -mt-1 font-bold">
               in real time.
             </span>
           </h2>
@@ -64,7 +64,7 @@ export default function StatsBand() {
                     <span className="text-xs font-mono text-muted-foreground uppercase font-bold tracking-wider">
                       {stat.label}
                     </span>
-                    <div className="size-9 rounded-full bg-secondary text-foreground dark:text-accent flex items-center justify-center">
+                    <div className="size-9 rounded-full bg-secondary text-foreground dark:text-primary flex items-center justify-center">
                       <Icon className="size-4" />
                     </div>
                   </div>

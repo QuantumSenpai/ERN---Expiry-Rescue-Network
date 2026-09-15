@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { ArrowLeft, ShieldCheck, Lock, EyeOff, Database, Mail, FileText, CheckCircle2 } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Lock, EyeOff, Database, Mail, FileText, CheckCircle2, Cookie } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 
@@ -135,8 +135,35 @@ export default function PrivacyPolicy() {
 
           <section className="p-6 rounded-2xl border border-border bg-card/40 space-y-4">
             <div className="flex items-center gap-3 text-primary font-heading font-bold text-lg">
+              <Cookie className="size-5" />
+              <h2>5. Cookies & Local Storage</h2>
+            </div>
+            <p>
+              The Expiry Rescue Network uses client-side web storage (<code className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">localStorage</code>) to maintain authenticated sessions without intrusive tracking cookies:
+            </p>
+            <ul className="list-disc pl-5 space-y-2 text-muted-foreground text-sm font-sans">
+              <li>
+                <strong className="text-foreground">Session Token (<code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">ern_token</code>):</strong> Stores your cryptographic HS256 JWT access token to authenticate your requests against Neon Postgres.
+              </li>
+              <li>
+                <strong className="text-foreground">User Profile (<code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">ern_user</code>):</strong> Caches non-sensitive identity metadata (name, email, role) to personalize portal navigation without requiring a database query on every page render.
+              </li>
+              <li>
+                <strong className="text-foreground">Cookie Consent (<code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">ern_cookie_ack</code>):</strong> Records your acknowledgment of this notice to prevent repetitive banners.
+              </li>
+            </ul>
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">Zero Third-Party Sharing:</strong> These items are never transmitted to third parties, analytics aggregators, or advertisers.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              <strong className="text-foreground">How to Clear:</strong> Clicking "Sign Out" in the top navigation or user menu immediately deletes both <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">ern_token</code> and <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">ern_user</code> from your browser. You may also clear them at any time via your browser's Developer Tools $\rightarrow$ Application $\rightarrow$ Local Storage.
+            </p>
+          </section>
+
+          <section className="p-6 rounded-2xl border border-border bg-card/40 space-y-4">
+            <div className="flex items-center gap-3 text-primary font-heading font-bold text-lg">
               <Mail className="size-5" />
-              <h2>5. Privacy Inquiries & Data Rights</h2>
+              <h2>6. Privacy Inquiries & Data Rights</h2>
             </div>
             <p>
               Under applicable data protection frameworks, you have the right to inspect, export, or request permanent deletion of your profile and associated listings.

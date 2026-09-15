@@ -1,4 +1,5 @@
-﻿import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
+import { api, type ApiReportsData } from "@/lib/api";
 import { Link } from "react-router-dom";
 import {
   BarChart3,
@@ -214,8 +215,31 @@ export default function Reports() {
     setTimeout(() => setToastMessage(null), 3500);
   };
 
-  const currentKPIs = PERIOD_KPIS[datePeriod];
-  const expiryTrend = EXPIRY_TREND_PERIODS[datePeriod];
+  const [reportData, setReportData] = useState<ApiReportsData | null>(null);
+  const [isLoadingReports, setIsLoadingReports] = useState(false);
+
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingReports(true);
+    api.admin
+      .reportsData(datePeriod)
+      .then((data) => {
+        if (isMounted) setReportData(data);
+      })
+      .catch((err) => {
+        console.error("Failed to load reports data:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingReports(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [datePeriod]);
+
+  const currentKPIs = reportData?.kpis || PERIOD_KPIS[datePeriod];
+  const expiryTrend = reportData?.trend || EXPIRY_TREND_PERIODS[datePeriod];
+  const categoryPerformance = reportData?.categories?.length ? reportData.categories : CATEGORY_PERFORMANCE;
 
   return (
     <div className="space-y-6 pb-24 text-foreground font-body">
@@ -391,12 +415,12 @@ export default function Reports() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[rgba(28,58,19,0.15)]">
-              {CATEGORY_PERFORMANCE.map((c) => (
+              {categoryPerformance.map((c: any) => (
                 <tr key={c.category} className="hover:bg-secondary/40 transition-colors">
                   <td className="px-4 py-3 font-bold text-foreground font-display uppercase">{c.category}</td>
-                  <td className="px-4 py-3 text-right text-muted-foreground">{c.inventoryUnits}</td>
-                  <td className="px-4 py-3 text-right font-bold text-foreground">{c.rescuedUnits}</td>
-                  <td className="px-4 py-3 text-right font-bold text-foreground">₹{c.recoveryValue.toLocaleString()}</td>
+                  <td className="px-4 py-3 text-right text-muted-foreground">{c.inventoryUnits ?? c.inventory_units ?? 0}</td>
+                  <td className="px-4 py-3 text-right font-bold text-foreground">{c.rescuedUnits ?? c.rescued_units ?? 0}</td>
+                  <td className="px-4 py-3 text-right font-bold text-foreground">₹{Number(c.recoveryValue ?? c.recovery_value ?? 0).toLocaleString()}</td>
                 </tr>
               ))}
             </tbody>

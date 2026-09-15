@@ -1,10 +1,10 @@
-﻿import { Navigate } from "react-router-dom";
-import { useAuth, type Role, getRoleHomeRoute } from "@/context/AuthContext";
+import { Navigate } from "react-router-dom";
+import { useAuth, type Role, getRoleHomeRoute, normalizeRole } from "@/context/AuthContext";
 import type { ReactNode } from "react";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  allowedRoles: Role[];
+  allowedRoles: (Role | string)[];
 }
 
 export default function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
@@ -14,7 +14,10 @@ export default function ProtectedRoute({ children, allowedRoles }: ProtectedRout
     return <Navigate to="/login" replace />;
   }
 
-  if (!allowedRoles.includes(user.role)) {
+  const userRole = normalizeRole(user.role);
+  const isAllowed = allowedRoles.some((r) => normalizeRole(r) === userRole);
+
+  if (!isAllowed) {
     return <Navigate to={getRoleHomeRoute(user.role)} replace />;
   }
 

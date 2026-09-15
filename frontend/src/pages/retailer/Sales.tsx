@@ -1,4 +1,4 @@
-﻿import { useState } from "react";
+import { useState, Fragment } from "react";
 import { Link } from "react-router-dom";
 import {
   TrendingUp,
@@ -152,7 +152,7 @@ export default function Sales() {
               {filtered.map((t) => {
                 const isExpanded = expandedTx === t.id;
                 return (
-                  <div key={t.id} style={{ display: "contents" }}>
+                  <Fragment key={t.id}>
                     <tr
                       onClick={() => setExpandedTx(isExpanded ? null : t.id)}
                       className="hover:bg-secondary/20 transition-colors cursor-pointer"
@@ -233,7 +233,7 @@ export default function Sales() {
                         </td>
                       </tr>
                     )}
-                  </div>
+                  </Fragment>
                 );
               })}
             </tbody>

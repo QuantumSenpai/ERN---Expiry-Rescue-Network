@@ -264,15 +264,17 @@ export default function Users() {
           id: `usr-${u.id}`,
           name: u.name,
           email: u.email,
-          role: u.role === "admin" ? "Admin" : u.role === "donor" ? "Staff" : "User",
+          role: u.role === "admin" ? "Admin" : (u.role === "staff" || u.role === "donor" || u.role === "retailer") ? "Staff" : "User",
           location: "All Locations",
           status: u.verified ? "Active" : "Pending",
           lastActive: "Active Session",
-          joinedDate: new Date(u.created_at).toLocaleDateString("en-GB", {
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-          }),
+          joinedDate: u.created_at
+            ? new Date(u.created_at).toLocaleDateString("en-GB", {
+                day: "2-digit",
+                month: "short",
+                year: "numeric",
+              })
+            : "Recent",
         }));
         setUsersList(liveMapped);
       })

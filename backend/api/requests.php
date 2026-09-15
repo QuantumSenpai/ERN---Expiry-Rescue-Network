@@ -63,21 +63,51 @@ if ($action === 'claim') {
 
 } elseif ($action === 'my_requests') {
 
-    $user = require_role(['buyer', 'customer']);
+    $user = require_role(['user', 'buyer', 'customer', 'staff', 'donor', 'retailer', 'admin']);
+    $normRole = normalize_role($user['role']);
 
-    $stmt = $pdo->prepare("
-        SELECT r.id, r.listing_id, r.status, r.requested_at,
-               l.item_name, l.category, l.expiry_date, l.orig_price, l.discount_price,
-               l.image_url, l.status AS listing_status,
-               u.name AS donor_name,
-               (l.expiry_date - CURRENT_DATE) AS days_remaining
-        FROM requests r
-        JOIN listings l ON r.listing_id = l.id
-        JOIN users u ON l.donor_id = u.id
-        WHERE r.buyer_id = ?
-        ORDER BY r.requested_at DESC
-    ");
-    $stmt->execute([$user['id']]);
+    if ($normRole === 'admin') {
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.listing_id, r.status, r.requested_at,
+                   l.item_name, l.category, l.expiry_date, l.orig_price, l.discount_price,
+                   l.image_url, l.status AS listing_status,
+                   COALESCE(u.name, 'Partner Facility') AS donor_name,
+                   (l.expiry_date - CURRENT_DATE) AS days_remaining
+            FROM requests r
+            JOIN listings l ON r.listing_id = l.id
+            LEFT JOIN users u ON l.donor_id = u.id
+            ORDER BY r.requested_at DESC
+        ");
+        $stmt->execute();
+    } elseif ($normRole === 'staff') {
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.listing_id, r.status, r.requested_at,
+                   l.item_name, l.category, l.expiry_date, l.orig_price, l.discount_price,
+                   l.image_url, l.status AS listing_status,
+                   COALESCE(u.name, 'Partner Facility') AS donor_name,
+                   (l.expiry_date - CURRENT_DATE) AS days_remaining
+            FROM requests r
+            JOIN listings l ON r.listing_id = l.id
+            LEFT JOIN users u ON l.donor_id = u.id
+            WHERE l.donor_id = ?
+            ORDER BY r.requested_at DESC
+        ");
+        $stmt->execute([$user['id']]);
+    } else {
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.listing_id, r.status, r.requested_at,
+                   l.item_name, l.category, l.expiry_date, l.orig_price, l.discount_price,
+                   l.image_url, l.status AS listing_status,
+                   COALESCE(u.name, 'Partner Facility') AS donor_name,
+                   (l.expiry_date - CURRENT_DATE) AS days_remaining
+            FROM requests r
+            JOIN listings l ON r.listing_id = l.id
+            LEFT JOIN users u ON l.donor_id = u.id
+            WHERE r.buyer_id = ?
+            ORDER BY r.requested_at DESC
+        ");
+        $stmt->execute([$user['id']]);
+    }
     $rows = $stmt->fetchAll();
 
     foreach ($rows as &$row) {
@@ -92,7 +122,7 @@ if ($action === 'claim') {
 
 } elseif ($action === 'incoming') {
 
-    $user = require_role(['donor', 'retailer']);
+    $user = require_role(['staff', 'donor', 'retailer']);
 
     $stmt = $pdo->prepare("
         SELECT r.id, r.listing_id, r.status, r.requested_at,
@@ -118,7 +148,7 @@ if ($action === 'claim') {
 
 } elseif ($action === 'cancel') {
 
-    $user = require_role(['buyer', 'customer']);
+    $user = require_role(['user', 'buyer', 'customer', 'staff', 'donor', 'retailer', 'admin']);
     $input = get_json_input();
     $request_id = isset($input['request_id']) ? (int)$input['request_id'] : (int)($_GET['id'] ?? 0);
 
@@ -134,7 +164,7 @@ if ($action === 'claim') {
         send_error("NOT_FOUND", "Request not found", 404);
     }
 
-    if ((int)$req['buyer_id'] !== (int)$user['id'] && $user['role'] !== 'admin') {
+    if ((int)$req['buyer_id'] !== (int)$user['id'] && normalize_role($user['role']) !== 'admin') {
         send_error("FORBIDDEN", "You can only cancel your own requests", 403);
     }
 

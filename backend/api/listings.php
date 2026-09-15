@@ -87,18 +87,33 @@ if ($action === 'browse') {
 
 } elseif ($action === 'my_listings') {
 
-    $user = require_role(['donor', 'retailer']);
+    $user = require_role(['staff', 'donor', 'retailer', 'admin']);
 
-    $stmt = $pdo->prepare("
-        SELECT l.*,
-               ROUND(((l.orig_price - l.discount_price) / NULLIF(l.orig_price, 0)) * 100) AS discount_percent,
-               (l.expiry_date - CURRENT_DATE) AS days_remaining
-        FROM listings l
-        WHERE l.donor_id = ?
-        ORDER BY l.created_at DESC
-    ");
-    $stmt->execute([$user['id']]);
-    $rows = $stmt->fetchAll();
+    if (normalize_role($user['role']) === 'admin') {
+        // Enterprise Admin: return all facility inventory lots across the platform
+        $stmt = $pdo->query("
+            SELECT l.*,
+                   COALESCE(u.name, 'Partner Facility') AS donor_name,
+                   ROUND(((l.orig_price - l.discount_price) / NULLIF(l.orig_price, 0)) * 100) AS discount_percent,
+                   (l.expiry_date - CURRENT_DATE) AS days_remaining
+            FROM listings l
+            LEFT JOIN users u ON l.donor_id = u.id
+            ORDER BY l.created_at DESC
+        ");
+        $rows = $stmt->fetchAll();
+    } else {
+        // Retailer / Staff / Donor: Scoped strictly to this staff facility ID
+        $stmt = $pdo->prepare("
+            SELECT l.*,
+                   ROUND(((l.orig_price - l.discount_price) / NULLIF(l.orig_price, 0)) * 100) AS discount_percent,
+                   (l.expiry_date - CURRENT_DATE) AS days_remaining
+            FROM listings l
+            WHERE l.donor_id = ?
+            ORDER BY l.created_at DESC
+        ");
+        $stmt->execute([$user['id']]);
+        $rows = $stmt->fetchAll();
+    }
 
     foreach ($rows as &$row) {
         $row['id'] = (int)$row['id'];
@@ -113,7 +128,7 @@ if ($action === 'browse') {
 
 } elseif ($action === 'create') {
 
-    $user = require_role(['donor', 'retailer']);
+    $user = require_role(['staff', 'donor', 'retailer', 'admin']);
     $input = get_json_input();
 
     $item_name = trim($input['item_name'] ?? '');
@@ -128,6 +143,10 @@ if ($action === 'browse') {
         send_error("INVALID_INPUT", "item_name, category, qty (>0), expiry_date, and orig_price (>0) are required", 400);
     }
 
+    $donor_id = $user['id'];
+    if (normalize_role($user['role']) === 'admin') {
+        $donor_id = isset($input['donor_id']) ? (int)$input['donor_id'] : 2;
+    }
 
     $days_left = (int)ceil((strtotime($expiry_date) - strtotime(date('Y-m-d'))) / 86400);
 
@@ -141,7 +160,7 @@ if ($action === 'browse') {
             ORDER BY days_threshold ASC
             LIMIT 1
         ");
-        $rule_stmt->execute([$user['id'], max(0, $days_left)]);
+        $rule_stmt->execute([$donor_id, max(0, $days_left)]);
         $rule = $rule_stmt->fetch();
 
         $discount_percent = $rule ? (float)$rule['discount_percent'] : 0.0;
@@ -153,7 +172,7 @@ if ($action === 'browse') {
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'available')
         RETURNING id
     ");
-    $stmt->execute([$user['id'], $item_name, $category, $qty, $expiry_date, $orig_price, $discount_price, $image_url]);
+    $stmt->execute([$donor_id, $item_name, $category, $qty, $expiry_date, $orig_price, $discount_price, $image_url]);
     $listing_id = (int)$stmt->fetchColumn();
 
     send_success([
@@ -164,7 +183,7 @@ if ($action === 'browse') {
 
 } elseif ($action === 'update') {
 
-    $user = require_role(['donor', 'retailer']);
+    $user = require_role(['staff', 'donor', 'retailer', 'admin']);
     $input = get_json_input();
     $id = isset($input['id']) ? (int)$input['id'] : (int)($_GET['id'] ?? 0);
 
@@ -234,7 +253,7 @@ if ($action === 'browse') {
 
 } elseif ($action === 'delete') {
 
-    $user = require_role(['donor', 'retailer']);
+    $user = require_role(['staff', 'donor', 'retailer', 'admin']);
     $id = isset($_GET['id']) ? (int)$_GET['id'] : (int)(get_json_input()['id'] ?? 0);
 
     if (!$id) {

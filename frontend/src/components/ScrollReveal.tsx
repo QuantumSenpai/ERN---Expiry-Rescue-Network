@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 
 interface ScrollRevealProps {
   children: ReactNode;
@@ -28,16 +28,15 @@ export default function ScrollReveal({
     const el = containerRef.current;
     if (!el) return;
 
-    // Fail-safe fallback timer so content is guaranteed to reveal
-    const fallbackTimer = setTimeout(() => {
-      setIsVisible(true);
-    }, 400 + delay);
-
     if (typeof IntersectionObserver === "undefined") {
       setIsVisible(true);
-      clearTimeout(fallbackTimer);
       return;
     }
+
+    // Generous fallback timer (8s) only in case of stalled rendering in edge cases
+    const fallbackTimer = setTimeout(() => {
+      setIsVisible(true);
+    }, 8000 + delay);
 
     const observer = new IntersectionObserver(
       ([entry]) => {
@@ -49,7 +48,7 @@ export default function ScrollReveal({
           setIsVisible(false);
         }
       },
-      { threshold: threshold ?? 0.05 }
+      { threshold: threshold ?? 0.08, rootMargin: "0px 0px -30px 0px" }
     );
 
     observer.observe(el);

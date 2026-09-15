@@ -1,4 +1,4 @@
-﻿import IsometricCluster from "@/components/IsometricCluster";
+import IsometricCluster from "@/components/IsometricCluster";
 import MagneticButton from "@/components/MagneticButton";
 import { ScanLine, AlertTriangle, RefreshCw } from "lucide-react";
 
@@ -22,7 +22,7 @@ export default function Hero() {
           {/* Headline — Poppins display, weight 500, 32px+ */}
           <h1 className="text-5xl sm:text-6xl md:text-7xl lg:text-[5rem] leading-[0.92] text-foreground font-medium tracking-[-0.02em] font-display">
             <span className="block">Prevent expiry.</span>
-            <span className="font-script text-6xl sm:text-7xl md:text-8xl lg:text-[5.75rem] text-foreground dark:text-accent block -mt-2 sm:-mt-3 normal-case">
+            <span className="font-script text-6xl sm:text-7xl md:text-8xl lg:text-[5.75rem] text-foreground dark:text-primary block -mt-2 sm:-mt-3 normal-case">
               Recover value.
             </span>
           </h1>
@@ -45,7 +45,7 @@ export default function Hero() {
           {/* Core Platform Capabilities */}
           <div className="mt-12 pt-8 border-t border-dotted border-border grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-5 text-left font-mono">
             <div className="group sm:border-r sm:border-dotted sm:border-border sm:pr-4">
-              <div className="flex items-center gap-2 text-foreground dark:text-accent">
+              <div className="flex items-center gap-2 text-foreground dark:text-primary">
                 <ScanLine className="size-4 shrink-0" />
                 <h3 className="text-xs uppercase font-bold tracking-wider">
                   INTELLIGENCE
@@ -57,7 +57,7 @@ export default function Hero() {
             </div>
 
             <div className="group sm:border-r sm:border-dotted sm:border-border sm:pr-4">
-              <div className="flex items-center gap-2 text-foreground dark:text-accent">
+              <div className="flex items-center gap-2 text-foreground dark:text-primary">
                 <AlertTriangle className="size-4 shrink-0" />
                 <h3 className="text-xs uppercase font-bold tracking-wider">
                   RISK RADAR
@@ -69,7 +69,7 @@ export default function Hero() {
             </div>
 
             <div className="group">
-              <div className="flex items-center gap-2 text-foreground dark:text-accent">
+              <div className="flex items-center gap-2 text-foreground dark:text-primary">
                 <RefreshCw className="size-4 shrink-0" />
                 <h3 className="text-xs uppercase font-bold tracking-wider">
                   RECOVERY

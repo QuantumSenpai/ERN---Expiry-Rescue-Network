@@ -1,4 +1,4 @@
-﻿import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   X,
   FileText,
@@ -27,6 +27,8 @@ const REPORT_TYPES = [
   { id: "recovery", name: "Recovery & Action Summary", desc: "Operational review queue and resolution logs", icon: FileText },
 ];
 
+import { exportToCsv, exportToXlsx, exportToPdf } from "@/lib/exportUtils";
+
 export default function GenerateReportModal({
   isOpen,
   onClose,
@@ -42,15 +44,34 @@ export default function GenerateReportModal({
   const handleGenerate = () => {
     setIsGenerating(true);
     setTimeout(() => {
+      const chosen = REPORT_TYPES.find((r) => r.id === selectedReport)?.name || "Inventory Report";
+      const filename = `ERN_${selectedReport}_report_${new Date().toISOString().split("T")[0]}`;
+      const headers = ["SKU / Code", "Item Description", "Category", "Quantity", "Unit Price (INR)", "Status"];
+      const rows = [
+        ["ERN-MILK-101", "Amul Taaza Homogenized Milk 1L", "Dairy", 60, "30.00", "Available"],
+        ["ERN-BREAD-204", "Artisan Whole Wheat Toast Loaf", "Bakery", 45, "48.00", "Available"],
+        ["ERN-DELI-309", "Gourmet Greek Dip & Olive Trio", "Deli & Snacks", 20, "116.00", "Available"],
+        ["ERN-VEG-412", "Organic Produce Selection Box (5kg)", "Produce", 15, "112.50", "Available"],
+        ["ERN-CHOC-515", "Roasted Hazelnut Chocolate Spread", "Packaged Goods", 25, "210.00", "Available"],
+        ["ERN-JUICE-618", "Fresh Alphonso Mango Pulp (850g)", "Beverages", 35, "156.00", "Available"],
+      ];
+
+      if (format === "csv") {
+        exportToCsv(filename, headers, rows);
+      } else if (format === "xlsx") {
+        exportToXlsx(filename, headers, rows);
+      } else {
+        exportToPdf(filename, chosen, headers, rows);
+      }
+
       setIsGenerating(false);
       setDownloadSuccess(true);
-      const chosen = REPORT_TYPES.find((r) => r.id === selectedReport)?.name || "Inventory Report";
       onReportGenerated?.(`${chosen} (${format.toUpperCase()})`);
       setTimeout(() => {
         setDownloadSuccess(false);
         onClose();
       }, 1200);
-    }, 1000);
+    }, 800);
   };
 
   return (

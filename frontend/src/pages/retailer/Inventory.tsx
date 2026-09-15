@@ -17,8 +17,11 @@ import { useToast } from "@/context/ToastContext";
 import { useDebounce } from "@/lib/useDebounce";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import { useAuth } from "@/context/AuthContext";
 
 export default function Inventory() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === "admin";
   const { showToast } = useToast();
 
   const [items, setItems] = useState<ApiListing[]>([]);
@@ -92,19 +95,21 @@ export default function Inventory() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-primary text-primary-foreground text-xs font-mono font-medium uppercase mb-2">
-            <span>STORE STOCK CONSOLE</span>
+            <span>{isAdmin ? "ENTERPRISE MASTER CONSOLE" : "STORE STOCK CONSOLE"}</span>
           </div>
-          <h1 className="font-display text-4xl sm:text-5xl font-[350] text-foreground leading-[1.08] tracking-[-0.025em]">
-            Live Inventory
+          <h1 className="font-display text-4xl sm:text-5xl font-bold text-foreground leading-[1.08] tracking-[-0.025em]">
+            {isAdmin ? "Platform Inventory" : "Live Inventory"}
           </h1>
           <p className="text-sm text-muted-foreground font-body mt-2">
-            Real-time batch tracking, automated dynamic markdown status, and liquidation dispatch.
+            {isAdmin
+              ? "Global multi-facility batch monitoring, automated markdown intelligence, and liquidation telemetry."
+              : "Real-time batch tracking, automated dynamic markdown status, and liquidation dispatch."}
           </p>
         </div>
 
         <div className="flex items-center gap-2.5">
           <Link
-            to="/retailer/add-product"
+            to={isAdmin ? "/admin/add-product" : "/retailer/add-product"}
             className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-primary hover:opacity-90 text-primary-foreground font-mono text-xs font-bold uppercase transition-all shadow-none min-h-[44px]"
           >
             <Plus className="size-4" />
@@ -184,15 +189,16 @@ export default function Inventory() {
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse">
                 <thead>
-                  <tr className="border-b border-border bg-secondary/30 text-muted-foreground uppercase text-[11px]">
-                    <th className="py-3.5 px-4 font-bold">Item & Category</th>
-                    <th className="py-3.5 px-4 font-bold">Units</th>
-                    <th className="py-3.5 px-4 font-bold">Standard Price</th>
-                    <th className="py-3.5 px-4 font-bold">Rescue Price</th>
-                    <th className="py-3.5 px-4 font-bold">Expiry Date</th>
-                    <th className="py-3.5 px-4 font-bold">Status</th>
-                    <th className="py-3.5 px-4 font-bold text-right">Actions</th>
-                  </tr>
+                  <tr className="border-b border-border text-muted-foreground font-mono text-[11px] uppercase">
+                  <th className="py-3 px-4">Item & Category</th>
+                  {isAdmin && <th className="py-3 px-4">Facility / Store</th>}
+                  <th className="py-3 px-4">Available Qty</th>
+                  <th className="py-3 px-4">Orig. Price</th>
+                  <th className="py-3 px-4">Rescue Price</th>
+                  <th className="py-3 px-4">Expiry Date</th>
+                  <th className="py-3 px-4">Status</th>
+                  <th className="py-3 px-4 text-right">Actions</th>
+                </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
                   {filteredItems.map((item) => {
@@ -203,6 +209,13 @@ export default function Inventory() {
                           <div className="font-sans font-bold text-foreground text-sm">{item.item_name}</div>
                           <span className="text-[10px] text-muted-foreground uppercase font-mono">{item.category}</span>
                         </td>
+                        {isAdmin && (
+                          <td className="py-3.5 px-4 text-xs font-medium text-foreground">
+                            <span className="px-2 py-0.5 rounded-full bg-secondary text-foreground text-[10px] font-mono">
+                              {item.donor_name || "Central Store"}
+                            </span>
+                          </td>
+                        )}
                         <td className="py-3.5 px-4 font-bold text-foreground">
                           <AnimatedNumber value={item.qty} />
                         </td>

@@ -1,26 +1,29 @@
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from "react";
 import { api, type BackendUser, type SignupPayload } from "@/lib/api";
 
-export type Role = "retailer" | "customer" | "admin";
+export type CanonicalRole = "admin" | "staff" | "user";
+export type Role = CanonicalRole | "retailer" | "customer";
 
-export const ROLE_HOME_ROUTES: Record<Role, string> = {
-  customer: "/marketplace",
-  retailer: "/retailer/dashboard",
+export const ROLE_HOME_ROUTES: Record<CanonicalRole, string> = {
+  user: "/marketplace",
+  staff: "/retailer/dashboard",
   admin: "/admin/dashboard",
 } as const;
 
-export function getRoleHomeRoute(role?: Role | string | null): string {
-  if (!role) return "/login";
-  if (role === "donor" || role === "retailer") return "/retailer/dashboard";
-  if (role === "buyer" || role === "customer") return "/marketplace";
-  if (role === "admin") return "/admin/dashboard";
-  return "/login";
+export function normalizeRole(rawRole?: string | null): CanonicalRole {
+  if (!rawRole) return "user";
+  const lower = rawRole.toLowerCase().trim();
+  if (lower === "admin") return "admin";
+  if (lower === "staff" || lower === "donor" || lower === "retailer") return "staff";
+  return "user";
 }
 
-export function normalizeRole(rawRole: string): Role {
-  if (rawRole === "donor" || rawRole === "retailer") return "retailer";
-  if (rawRole === "buyer" || rawRole === "customer") return "customer";
-  return "admin";
+export function getRoleHomeRoute(role?: Role | string | null): string {
+  if (!role) return "/login";
+  const norm = normalizeRole(role);
+  if (norm === "admin") return "/admin/dashboard";
+  if (norm === "staff") return "/retailer/dashboard";
+  return "/marketplace";
 }
 
 export interface AuthUser {
@@ -28,7 +31,7 @@ export interface AuthUser {
   name: string;
   email: string;
   role: Role;
-  rawRole?: "donor" | "buyer" | "admin";
+  rawRole?: string;
   buyerType?: "individual" | "ngo" | "orphanage" | null;
   verified?: boolean;
 }
@@ -54,7 +57,7 @@ function mapBackendUser(u: BackendUser): AuthUser {
     name: u.name,
     email: u.email,
     role: normRole,
-    rawRole: (u.role === "retailer" ? "donor" : u.role === "customer" ? "buyer" : u.role) as "donor" | "buyer" | "admin",
+    rawRole: u.role,
     buyerType: u.buyer_type,
     verified: Boolean(u.verified),
   };
@@ -103,7 +106,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     initAuth();
 
 
-    const handleUnauthorized = () => {
+    const handleUnauthorized = (e: Event) => {
+      const wasAdmin = (e as CustomEvent)?.detail?.wasAdmin;
+      if (wasAdmin) {
+        sessionStorage.setItem("ern_auth_notice", "Your admin session expired for security — please log in again");
+      } else {
+        sessionStorage.setItem("ern_auth_notice", "Your session has expired. Please log in again.");
+      }
       logout();
     };
 
@@ -119,7 +128,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const mappedUser: AuthUser = {
         ...param,
         role: normRole,
-        rawRole: (param.rawRole || (normRole === "retailer" ? "donor" : normRole === "customer" ? "buyer" : "admin")) as "donor" | "buyer" | "admin",
+        rawRole: (param.rawRole || (normRole === "staff" ? "donor" : normRole === "user" ? "buyer" : "admin")) as "donor" | "buyer" | "admin",
         verified: param.verified ?? true,
       };
       localStorage.setItem("ern_user", JSON.stringify(mappedUser));

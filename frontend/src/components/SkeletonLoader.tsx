@@ -19,12 +19,12 @@ export default function SkeletonLoader({
             key={i}
             className="rounded-2xl bg-card border border-border overflow-hidden p-5 flex flex-col gap-4"
           >
-            <div className="aspect-[16/10] w-full rounded-xl ern-skeleton opacity-60" />
-            <div className="h-5 w-3/4 rounded-md ern-skeleton opacity-60" />
-            <div className="h-4 w-1/2 rounded-md ern-skeleton opacity-40" />
+            <div className="aspect-[16/10] w-full rounded-xl bg-secondary/70 animate-pulse" />
+            <div className="h-5 w-3/4 rounded-md bg-secondary/70 animate-pulse" />
+            <div className="h-4 w-1/2 rounded-md bg-secondary/50 animate-pulse" />
             <div className="mt-4 pt-3 border-t border-border flex justify-between items-center">
-              <div className="h-6 w-20 rounded-md ern-skeleton opacity-60" />
-              <div className="h-4 w-16 rounded-md ern-skeleton opacity-40" />
+              <div className="h-6 w-20 rounded-md bg-secondary/70 animate-pulse" />
+              <div className="h-4 w-16 rounded-md bg-secondary/50 animate-pulse" />
             </div>
           </div>
         ))}
@@ -40,9 +40,9 @@ export default function SkeletonLoader({
             key={i}
             className="p-6 rounded-2xl bg-card border border-border flex flex-col gap-3"
           >
-            <div className="size-11 rounded-xl ern-skeleton opacity-60" />
-            <div className="h-8 w-28 rounded-md ern-skeleton opacity-70" />
-            <div className="h-4 w-20 rounded-md ern-skeleton opacity-50" />
+            <div className="size-11 rounded-xl bg-secondary/70 animate-pulse" />
+            <div className="h-8 w-28 rounded-md bg-secondary/70 animate-pulse" />
+            <div className="h-4 w-20 rounded-md bg-secondary/50 animate-pulse" />
           </div>
         ))}
       </div>
@@ -52,7 +52,7 @@ export default function SkeletonLoader({
   return (
     <div className={`flex flex-col gap-3 ${className}`}>
       {items.map((_, i) => (
-        <div key={i} className="h-4 w-full rounded-md ern-skeleton opacity-60" />
+        <div key={i} className="h-4 w-full rounded-md bg-secondary/70 animate-pulse" />
       ))}
     </div>
   );

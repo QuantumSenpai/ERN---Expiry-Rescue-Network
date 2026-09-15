@@ -111,6 +111,7 @@ interface CartContextType {
   ) => void;
   updateQty: (idx: number, delta: number) => void;
   removeItem: (idx: number) => void;
+  removeItemByListingId: (listingOrProductId: string | number) => void;
   clearCart: () => void;
   totalCount: number;
   totalAmount: number;
@@ -148,7 +149,7 @@ interface CartContextType {
   selectedPaymentId: string;
   setSelectedPaymentId: (id: string) => void;
   placedOrder: PlacedOrderData | null;
-  createOrder: () => PlacedOrderData;
+  createOrder: (overrideItems?: CartItem[]) => PlacedOrderData;
 }
 
 const DELIVERY_OPTIONS: DeliveryOption[] = [
@@ -490,6 +491,15 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setCartItems((prev) => prev.filter((_, i) => i !== idx));
   }, []);
 
+  const removeItemByListingId = useCallback((listingOrProductId: string | number) => {
+    setCartItems((prev) =>
+      prev.filter((item) => {
+        const rawId = (item as any)?.listingId || (item as any)?.listing_id || item.product?.id || (item.product as any)?.productId;
+        return String(rawId) !== String(listingOrProductId) && String(item.product?.id) !== String(listingOrProductId);
+      })
+    );
+  }, []);
+
   const clearCart = useCallback(() => {
     setCartItems([]);
   }, []);
@@ -798,28 +808,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // 8. Create & Place Order with Live Inventory Stock Deductions
-  const createOrder = useCallback((): PlacedOrderData => {
+  const createOrder = useCallback((overrideItems?: CartItem[]): PlacedOrderData => {
+    const activeItems = overrideItems || cartItems;
+    let computedTotalAmount = 0;
+    let computedOriginalTotal = 0;
+    for (const item of activeItems) {
+      if (!item) continue;
+      const qty = Math.max(1, item.quantity || 1);
+      const safeMrp = Number(item.selectedOffer?.mrp ?? item.product?.mrp ?? item.selectedOffer?.price ?? 0);
+      const safeSellingPrice = Number(item.selectedOffer?.price ?? (item.product as any)?.price ?? safeMrp);
+      const pricing = calculatePricing(safeMrp, { sellingPrice: safeSellingPrice });
+      computedTotalAmount += pricing.sellingPrice * qty;
+      computedOriginalTotal += pricing.mrp * qty;
+    }
+    const computedTotalSavings = Math.max(0, computedOriginalTotal - computedTotalAmount);
+
     const finalDeliveryFee =
-      selectedDelivery.freeThreshold && totalAmount >= selectedDelivery.freeThreshold
+      selectedDelivery.freeThreshold && computedTotalAmount >= selectedDelivery.freeThreshold
         ? 0
         : selectedDelivery.fee;
 
-    const totalPaid = totalAmount + finalDeliveryFee;
-    const totalUnits = cartItems.reduce((acc, it) => acc + it.quantity, 0);
+    const totalPaid = computedTotalAmount + finalDeliveryFee;
+    const totalUnits = activeItems.reduce((acc, it) => acc + (it.quantity || 1), 0);
     const primaryStoreId =
-      cartItems[0]?.storeId || cartItems[0]?.selectedOffer?.storeId || "main-branch";
+      activeItems[0]?.storeId || activeItems[0]?.selectedOffer?.storeId || "main-branch";
     const primaryStoreName =
-      cartItems[0]?.storeName ||
-      cartItems[0]?.selectedOffer?.storeName ||
+      activeItems[0]?.storeName ||
+      activeItems[0]?.selectedOffer?.storeName ||
       getStoreDisplayName(primaryStoreId);
 
     const newOrderData: PlacedOrderData = {
       orderId: `ERN-${new Date().getFullYear()}-${Math.floor(10000 + Math.random() * 90000)}`,
-      items: [...cartItems],
+      items: [...activeItems],
       totalUnits,
-      subtotal: totalAmount,
+      subtotal: computedTotalAmount,
       deliveryFee: finalDeliveryFee,
-      totalSavings,
+      totalSavings: computedTotalSavings,
       totalPaid,
       address: selectedAddress,
       deliveryOption: selectedDelivery,
@@ -849,7 +873,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
 
     // Deduct stock from exact store and batch in inventoryStore
-    for (const it of cartItems) {
+    for (const it of activeItems) {
       const itemStoreId = it.storeId || it.selectedOffer.storeId || primaryStoreId;
       const prodId = it.product.productId || it.product.id;
       const batchNumber = it.selectedOffer.batchNumber;
@@ -948,6 +972,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         addToCart,
         updateQty,
         removeItem,
+        removeItemByListingId,
         clearCart,
         totalCount,
         totalAmount,

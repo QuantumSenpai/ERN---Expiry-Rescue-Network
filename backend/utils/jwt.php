@@ -13,6 +13,13 @@ function base64url_decode(string $data): string {
     return base64_decode(strtr($data, '-_', '+/'));
 }
 
+function get_role_token_ttl(string $role): int {
+    if ($role === 'admin') {
+        return 4 * 3600;
+    }
+    return 7 * 86400;
+}
+
 function jwt_encode(array $payload, string $secret): string {
     $header = [
         'alg' => 'HS256',

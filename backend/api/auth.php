@@ -1,8 +1,8 @@
 <?php
 
 
-require_once __DIR__ . '/../config/db.php';
 require_once __DIR__ . '/../utils/helpers.php';
+require_once __DIR__ . '/../config/db.php';
 
 $action = $_GET['action'] ?? '';
 
@@ -11,33 +11,32 @@ if ($action === 'signup') {
     $name = trim($input['name'] ?? '');
     $email = strtolower(trim($input['email'] ?? ''));
     $password = $input['password'] ?? '';
-    $role = trim($input['role'] ?? '');
-    $buyer_type = $input['buyer_type'] ?? null;
+    $rawRole = trim($input['role'] ?? 'user');
+    $role = normalize_role($rawRole);
+    $buyer_type = $input['buyer_type'] ?? ($role === 'user' ? 'individual' : null);
 
-
-    if ($role === 'retailer') $role = 'donor';
-    if ($role === 'customer') $role = 'buyer';
-
-    if (!$name || !$email || !$password || !$role) {
-        send_error("INVALID_INPUT", "Name, email, password, and role are required", 400);
+    if (!$name || !$email || !$password) {
+        send_error("INVALID_INPUT", "Name, email, and password are required", 400);
     }
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         send_error("INVALID_EMAIL", "A valid email address is required", 400);
     }
 
-    if (strlen($password) < 8) {
-        send_error("WEAK_PASSWORD", "Password must be at least 8 characters long", 400);
+    if (strlen($password) < 6 || !preg_match('/[A-Za-z]/', $password) || !preg_match('/[0-9]/', $password)) {
+        send_error("WEAK_PASSWORD", "Password must be at least 6 characters long and contain both letters and numbers", 400);
     }
 
-    if (!in_array($role, ['donor', 'buyer', 'admin'], true)) {
-        send_error("INVALID_ROLE", "Role must be donor, buyer, or admin", 400);
+    if ($role === 'admin') {
+        $adminInviteKey = trim($input['admin_invite_key'] ?? '');
+        $expectedKey = getenv('ADMIN_INVITE_KEY') ?: ($_ENV['ADMIN_INVITE_KEY'] ?? ($_SERVER['ADMIN_INVITE_KEY'] ?? ''));
+        if (empty($expectedKey)) {
+            send_error("SERVER_CONFIG_ERROR", "Administrator registration is disabled or unconfigured on this server.", 500);
+        }
+        if (!$adminInviteKey || !hash_equals($expectedKey, $adminInviteKey)) {
+            send_error("FORBIDDEN", "Invalid or missing Admin Invite Key. Administrator registration requires authorized clearance.", 403);
+        }
     }
-
-    if ($role === 'buyer' && !in_array($buyer_type, ['individual', 'ngo', 'orphanage'], true)) {
-        send_error("INVALID_BUYER_TYPE", "buyer_type ('individual', 'ngo', 'orphanage') is required for buyers", 400);
-    }
-
 
     $check = $pdo->prepare("SELECT id FROM users WHERE LOWER(email) = LOWER(?)");
     $check->execute([$email]);
@@ -48,15 +47,15 @@ if ($action === 'signup') {
     $hashed = password_hash($password, PASSWORD_DEFAULT);
     $stmt = $pdo->prepare("
         INSERT INTO users (name, role, buyer_type, email, password, verified)
-        VALUES (?, ?, ?, ?, ?, FALSE)
+        VALUES (?, ?, ?, ?, ?, TRUE)
         RETURNING id
     ");
-    $stmt->execute([$name, $role, $role === 'buyer' ? $buyer_type : null, $email, $hashed]);
+    $stmt->execute([$name, $role, $role === 'user' ? $buyer_type : null, $email, $hashed]);
     $userId = $stmt->fetchColumn();
 
     send_success(
-        ["user_id" => (int)$userId],
-        "Account created successfully. Awaiting administrative verification before portal activation.",
+        ["user_id" => (int)$userId, "role" => $role],
+        "Account created successfully. You may now sign in.",
         201
     );
 
@@ -86,9 +85,11 @@ if ($action === 'signup') {
 
     unset($user['password']);
     $user['id'] = (int)$user['id'];
+    $user['role'] = normalize_role($user['role']);
     $user['verified'] = true;
 
 
+    $ttl = get_role_token_ttl($user['role']);
     $tokenPayload = [
         'sub'        => $user['id'],
         'id'         => $user['id'],
@@ -97,7 +98,7 @@ if ($action === 'signup') {
         'role'       => $user['role'],
         'buyer_type' => $user['buyer_type'],
         'iat'        => time(),
-        'exp'        => time() + (86400 * 7),
+        'exp'        => time() + $ttl,
     ];
 
     $token = jwt_encode($tokenPayload, get_jwt_secret());
@@ -120,6 +121,7 @@ if ($action === 'signup') {
     }
 
     $user['id'] = (int)$user['id'];
+    $user['role'] = normalize_role($user['role']);
     $user['verified'] = ($user['verified'] === true || $user['verified'] === 't' || $user['verified'] === 1 || $user['verified'] === '1');
 
     send_success(["user" => $user], "Session active");

@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, memo } from "react";
-import { Search, Building2, Check, X, AlertTriangle, RefreshCw, ShoppingBag, Clock } from "lucide-react";
+import { Search, Building2, Check, X, AlertTriangle, RefreshCw, ShoppingBag, Clock, ShoppingCart } from "lucide-react";
 import { api, type ApiListing } from "@/lib/api";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/context/ToastContext";
+import { useCart } from "@/context/CartContext";
+import type { MarketplaceProduct } from "@/data/marketplaceData";
 import { useDebounce } from "@/lib/useDebounce";
 import SkeletonLoader from "@/components/SkeletonLoader";
 import AnimatedNumber from "@/components/AnimatedNumber";
@@ -24,6 +26,7 @@ const FALLBACK_IMAGE =
 interface ListingCardProps {
   item: ApiListing;
   onClaim: (item: ApiListing) => void;
+  onAddToCart: (item: ApiListing) => void;
   isClaiming: boolean;
   canClaim: boolean;
 }
@@ -31,6 +34,7 @@ interface ListingCardProps {
 const ListingCard = memo(function ListingCard({
   item,
   onClaim,
+  onAddToCart,
   isClaiming,
   canClaim,
 }: ListingCardProps) {
@@ -110,22 +114,30 @@ const ListingCard = memo(function ListingCard({
       </div>
 
       
-      <div className="p-5 pt-0">
+      <div className="p-5 pt-0 flex flex-col sm:flex-row gap-2">
+        <button
+          type="button"
+          onClick={() => onAddToCart(item)}
+          className="flex-1 py-3 px-3 rounded-full bg-secondary hover:bg-secondary/80 text-foreground text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 border border-border cursor-pointer transition-all min-h-[44px]"
+        >
+          <ShoppingCart className="size-3.5 text-primary" />
+          <span>ADD TO CART</span>
+        </button>
         <button
           type="button"
           onClick={() => onClaim(item)}
           disabled={isClaiming}
-          className="w-full py-3 px-4 rounded-full bg-primary hover:opacity-90 text-primary-foreground text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-2 shadow-none cursor-pointer transition-all disabled:opacity-50 min-h-[44px]"
+          className="flex-1 py-3 px-3 rounded-full bg-primary hover:opacity-90 text-primary-foreground text-xs font-mono font-bold tracking-wider uppercase flex items-center justify-center gap-1.5 shadow-none cursor-pointer transition-all disabled:opacity-50 min-h-[44px]"
         >
           {isClaiming ? (
             <>
               <div className="size-3.5 border-2 border-primary-foreground border-t-transparent rounded-full animate-spin" />
-              <span>CLAIMING LOT...</span>
+              <span>CLAIMING...</span>
             </>
           ) : (
             <>
               <ShoppingBag className="size-3.5" />
-              <span>{canClaim ? "CLAIM RESCUE LOT" : "SIGN IN TO CLAIM"}</span>
+              <span>{canClaim ? "CLAIM LOT" : "SIGN IN"}</span>
             </>
           )}
         </button>
@@ -136,6 +148,7 @@ const ListingCard = memo(function ListingCard({
 
 export default function Browse() {
   const { user, isAuthenticated } = useAuth();
+  const { addToCart } = useCart();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -202,6 +215,45 @@ export default function Browse() {
     } finally {
       setClaimingId(null);
     }
+  };
+
+  const handleAddToCart = (item: ApiListing) => {
+    const product: MarketplaceProduct = {
+      id: String(item.id),
+      productId: String(item.id),
+      name: item.item_name,
+      subtitle: `${item.donor_name || "ERN Partner"} • Lot #${item.id}`,
+      brand: item.donor_name || "ERN Partner",
+      unit: `${item.qty} units`,
+      category: item.category,
+      categorySlug: "dairy",
+      mrp: item.orig_price,
+      rating: 4.9,
+      reviewsCount: 24,
+      imageUrl: item.image_url || FALLBACK_IMAGE,
+      defaultOffer: {
+        id: `offer-${item.id}`,
+        batchNumber: `LOT-${item.id}`,
+        expiryDate: item.expiry_date,
+        price: item.discount_price,
+        mrp: item.orig_price,
+        discountPercent: item.orig_price > 0 ? Math.round(((item.orig_price - item.discount_price) / item.orig_price) * 100) : 0,
+        type: "Rescue Deal",
+        savings: Math.max(0, item.orig_price - item.discount_price),
+        availability: item.qty,
+        storeId: "donor-store",
+        storeName: item.donor_name || "Verified Store Partner",
+      },
+      allOffers: [],
+      isRescueDeal: true,
+      isPopular: true,
+      isRecommended: true,
+      isClearance: true,
+      isBuyAgain: false,
+      description: `Rescued inventory from ${item.donor_name || "Partner Store"}.`,
+    };
+    addToCart(product, product.defaultOffer, 1);
+    showToast(`Added "${item.item_name}" to your rescue cart.`);
   };
 
   return (
@@ -292,6 +344,7 @@ export default function Browse() {
                 key={item.id}
                 item={item}
                 onClaim={handleClaim}
+                onAddToCart={handleAddToCart}
                 isClaiming={claimingId === item.id}
                 canClaim={isAuthenticated}
               />

@@ -27,9 +27,12 @@ import {
 import { useCart, type SavedAddress } from "@/context/CartContext";
 import { calculateExpiryStatus } from "@/lib/expiryService";
 import { calculatePricing, formatINR } from "@/lib/pricingService";
+import { api, ApiError } from "@/lib/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function CustomerCheckout() {
   const navigate = useNavigate();
+  const { user, isAuthenticated } = useAuth();
   const {
     cartItems,
     totalCount,
@@ -53,12 +56,13 @@ export default function CustomerCheckout() {
     setSelectedPaymentId,
     validateCart,
     createOrder,
+    removeItemByListingId,
   } = useCart();
 
-  // 3-Step Indicator: 1 = Delivery, 2 = Payment, 3 = Review
+
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3>(1);
 
-  // Address Modal State
+
   const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [addressForm, setAddressForm] = useState({
@@ -106,7 +110,7 @@ function isValidExpiry(val: string): boolean {
   return true;
 }
 
-  // Mock Payment Sub-inputs
+
   const [upiId, setUpiId] = useState("customer@oksbi");
   const [upiError, setUpiError] = useState("");
   const [cardNumber, setCardNumber] = useState("4242 4242 4242 4242");
@@ -146,10 +150,15 @@ function isValidExpiry(val: string): boolean {
     }
   };
 
-  // Place Order Loading State
+
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [loadingText, setLoadingText] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [orderNotice, setOrderNotice] = useState<{
+    type: "warning" | "error";
+    title: string;
+    message: string;
+  } | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -159,7 +168,7 @@ function isValidExpiry(val: string): boolean {
   const deliveryFee = selectedDelivery.fee;
   const grandTotal = totalAmount + deliveryFee;
 
-  // Address Form Actions
+
   const handleOpenAddAddress = () => {
     setEditingAddressId(null);
     setAddressForm({
@@ -235,7 +244,7 @@ function isValidExpiry(val: string): boolean {
     setIsAddressModalOpen(false);
   };
 
-  // Step Validation & Progression
+
   const handleProceedToPayment = () => {
     if (!selectedAddress) {
       showToast("Please select or add a delivery address");
@@ -277,10 +286,21 @@ function isValidExpiry(val: string): boolean {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     if (cartItems.length === 0) {
       showToast("Your cart is empty. Please add items to checkout.");
       navigate("/marketplace");
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showToast("Please sign in as a verified buyer to complete checkout.");
+      navigate("/login");
+      return;
+    }
+
+    if (user?.role === "retailer" && user.rawRole === "donor") {
+      showToast("Donors cannot claim rescue items. Please use a buyer account.");
       return;
     }
 
@@ -293,7 +313,6 @@ function isValidExpiry(val: string): boolean {
       }
     }
 
-    // Run live cart validation
     const validation = validateCart();
     if (!validation.isValid) {
       showToast("Some items in your cart have changed. Please review your cart.");
@@ -302,22 +321,100 @@ function isValidExpiry(val: string): boolean {
     }
 
     setIsPlacingOrder(true);
-    setLoadingText("Verifying batch inventory & shelf life...");
+    setLoadingText("Rescuing lots and synchronizing with ERN network...");
+    setOrderNotice(null);
 
-    setTimeout(() => {
+    try {
+      const failedItems: { item: (typeof cartItems)[0]; listingId: number | string; reason: string }[] = [];
+      const successfulItems: (typeof cartItems)[0][] = [];
+
+      for (const item of cartItems) {
+        const rawId = (item as any)?.listingId || (item as any)?.listing_id || item.product?.id || (item.product as any)?.productId;
+        let listingId: number | null = null;
+        if (typeof rawId === "number" && rawId > 0) {
+          listingId = rawId;
+        } else if (typeof rawId === "string") {
+          const num = Number(rawId);
+          if (!isNaN(num) && num > 0 && Number.isInteger(num)) {
+            listingId = num;
+          }
+        }
+
+        if (listingId) {
+          try {
+            await api.requests.claim(listingId);
+            successfulItems.push(item);
+          } catch (claimErr: unknown) {
+            let reason = "This lot is no longer available (already claimed by another buyer)";
+            if (claimErr instanceof ApiError) {
+              if (claimErr.code === "ALREADY_CLAIMED" || claimErr.status === 409) {
+                reason = "This lot is no longer available (already claimed by another buyer)";
+              } else if (claimErr.message) {
+                reason = claimErr.message;
+              }
+            } else if (claimErr instanceof Error && claimErr.message) {
+              reason = claimErr.message;
+            }
+            failedItems.push({ item, listingId, reason });
+            removeItemByListingId(rawId);
+          }
+        } else {
+          successfulItems.push(item);
+        }
+      }
+
+      if (failedItems.length > 0) {
+        const failedDescriptions = failedItems
+          .map((f) => `"${f.item.product.name}" (${f.reason})`)
+          .join("; ");
+
+        if (successfulItems.length === 0) {
+          setIsPlacingOrder(false);
+          const msg = failedItems.length === 1
+            ? `"${failedItems[0].item.product.name}" is no longer available (already claimed) and has been removed from your cart.`
+            : `Selected rescue lots are no longer available (${failedDescriptions}) and have been removed from your cart.`;
+
+          setOrderNotice({
+            type: "error",
+            title: "Rescue Lot Unavailable",
+            message: msg,
+          });
+          showToast(msg);
+          return;
+        } else {
+          const noticeMsg = `Some items in your cart were no longer available (${failedDescriptions}) and have been removed. Processing your remaining order now.`;
+          setOrderNotice({
+            type: "warning",
+            title: "Unavailable Lots Removed",
+            message: noticeMsg,
+          });
+          showToast(`Removed unavailable items. Checking out remaining rescue lot(s)...`);
+        }
+      }
+
       setLoadingText("Generating verified ERN rescue order pass...");
-    }, 900);
+      await new Promise((resolve) => setTimeout(resolve, 600));
 
-    setTimeout(() => {
-      createOrder();
+      createOrder(successfulItems);
       setIsPlacingOrder(false);
-      navigate("/customer/order-success");
-    }, 1800);
+      navigate("/customer/order-success", {
+        state: {
+          notice:
+            failedItems.length > 0
+              ? `Note: Some items (${failedItems.map((f) => `"${f.item.product.name}"`).join(", ")}) were already claimed by another buyer and removed from this order.`
+              : undefined,
+        },
+      });
+    } catch (err: unknown) {
+      console.error("Order processing error:", err);
+      showToast("Encountered an issue processing rescue order. Please retry.");
+      setIsPlacingOrder(false);
+    }
   };
 
   return (
     <div className="min-h-screen bg-background text-foreground py-6 px-4 sm:px-6 lg:px-8 font-body">
-      {/* Toast Notification */}
+      
       {toastMessage && (
         <div className="fixed bottom-6 right-6 z-50 p-4 rounded-full bg-card border border-border shadow-2xl text-foreground font-mono text-xs flex items-center gap-2.5 animate-in fade-in slide-in-from-bottom-2">
           <CheckCircle2 className="size-4 text-emerald-500 shrink-0" />
@@ -334,7 +431,7 @@ function isValidExpiry(val: string): boolean {
       )}
 
       <div className="max-w-[1440px] mx-auto space-y-6">
-        {/* Breadcrumb Navigation */}
+        
         <nav className="flex items-center gap-2 text-xs font-mono text-muted-foreground">
           <Link to="/marketplace" className="hover:text-foreground transition-colors flex items-center gap-1">
             <ArrowLeft className="size-3.5" />
@@ -348,16 +445,16 @@ function isValidExpiry(val: string): boolean {
           <span className="text-foreground font-semibold">Checkout</span>
         </nav>
 
-        {/* Checkout Header & Steps Indicator */}
+        
         <div className="space-y-4">
           <h1 className="font-display text-2xl sm:text-3xl font-bold text-foreground tracking-tight">
             Customer Checkout
           </h1>
 
-          {/* 3-Step Bar */}
+          
           <div className="p-3 sm:p-4 rounded-2xl bg-card border border-border shadow-xs">
             <div className="flex items-center justify-between max-w-xl mx-auto text-xs font-mono">
-              {/* Step 1: Delivery */}
+              
               <button
                 type="button"
                 onClick={() => setCurrentStep(1)}
@@ -385,7 +482,7 @@ function isValidExpiry(val: string): boolean {
 
               <span className="text-border">──────</span>
 
-              {/* Step 2: Payment */}
+              
               <button
                 type="button"
                 onClick={() => {
@@ -415,7 +512,7 @@ function isValidExpiry(val: string): boolean {
 
               <span className="text-border">──────</span>
 
-              {/* Step 3: Review */}
+              
               <button
                 type="button"
                 onClick={() => {
@@ -440,7 +537,36 @@ function isValidExpiry(val: string): boolean {
           </div>
         </div>
 
-        {/* Empty Cart Warning */}
+        
+        {orderNotice && (
+          <div
+            role="alert"
+            className={`p-4 rounded-2xl border flex items-start gap-3.5 animate-in fade-in slide-in-from-top-2 ${
+              orderNotice.type === "error"
+                ? "bg-destructive/10 border-destructive/30 text-destructive dark:text-red-400"
+                : "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400"
+            }`}
+          >
+            <AlertTriangle className="size-5 shrink-0 mt-0.5" />
+            <div className="flex-1 space-y-1">
+              <h4 className="font-mono text-xs font-bold uppercase tracking-wider">
+                {orderNotice.title}
+              </h4>
+              <p className="font-sans text-xs leading-relaxed">
+                {orderNotice.message}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setOrderNotice(null)}
+              className="text-muted-foreground hover:text-foreground cursor-pointer"
+              aria-label="Dismiss notice"
+            >
+              <X className="size-4" />
+            </button>
+          </div>
+        )}
+
         {cartItems.length === 0 ? (
           <div className="py-16 px-4 max-w-md mx-auto text-center rounded-3xl bg-card border border-border space-y-4 shadow-sm">
             <div className="size-16 rounded-full bg-secondary text-muted-foreground flex items-center justify-center mx-auto">
@@ -461,16 +587,16 @@ function isValidExpiry(val: string): boolean {
             </Link>
           </div>
         ) : (
-          /* Main 2-Column Checkout Layout */
+          
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            {/* Left Column: Active Step Details (8 cols) */}
+            
             <div className="lg:col-span-8 space-y-6">
-              {/* ══════════════════════════════════════════ */}
-              {/* STEP 1: DELIVERY ADDRESS & METHOD         */}
-              {/* ══════════════════════════════════════════ */}
+              
+              
+              
               {currentStep === 1 && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Delivery Address Section */}
+                  
                   <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-xs space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-border">
                       <div className="flex items-center gap-2.5">
@@ -497,7 +623,7 @@ function isValidExpiry(val: string): boolean {
                       </button>
                     </div>
 
-                    {/* Saved Addresses Grid */}
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       {addresses.map((addr) => {
                         const isSelected = selectedAddressId === addr.id;
@@ -568,7 +694,7 @@ function isValidExpiry(val: string): boolean {
                     </div>
                   </div>
 
-                  {/* Delivery Speed / Fulfillment Method */}
+                  
                   <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-xs space-y-4">
                     <div className="flex items-center gap-2.5 pb-3 border-b border-border">
                       <div className="size-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
@@ -616,7 +742,7 @@ function isValidExpiry(val: string): boolean {
                     </div>
                   </div>
 
-                  {/* Step 1 Action CTA */}
+                  
                   <div className="flex justify-end pt-2 font-mono">
                     <button
                       type="button"
@@ -630,9 +756,9 @@ function isValidExpiry(val: string): boolean {
                 </div>
               )}
 
-              {/* ══════════════════════════════════════════ */}
-              {/* STEP 2: PAYMENT METHOD                    */}
-              {/* ══════════════════════════════════════════ */}
+              
+              
+              
               {currentStep === 2 && (
                 <div className="space-y-6 animate-in fade-in duration-200">
                   <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-xs space-y-4">
@@ -651,13 +777,13 @@ function isValidExpiry(val: string): boolean {
                         </div>
                       </div>
 
-                      {/* Demo Payment Notice */}
+                      
                       <span className="px-3 py-1 rounded-full bg-secondary text-foreground text-[10.5px] font-mono font-medium border border-border">
                         Demo Simulation Active
                       </span>
                     </div>
 
-                    {/* Payment Mode Selector Tabs */}
+                    
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 font-mono text-xs">
                       {paymentMethods.map((pm) => {
                         const isSelected = selectedPaymentId === pm.id;
@@ -681,7 +807,7 @@ function isValidExpiry(val: string): boolean {
                       })}
                     </div>
 
-                    {/* Sub-form based on selected payment */}
+                    
                     <div className="p-4 rounded-2xl bg-secondary/30 border border-border space-y-3 font-sans text-xs">
                       {selectedPaymentId === "upi" && (
                         <div className="space-y-2">
@@ -783,7 +909,7 @@ function isValidExpiry(val: string): boolean {
                     </div>
                   </div>
 
-                  {/* Step 2 Action CTAs */}
+                  
                   <div className="flex items-center justify-between pt-2 font-mono">
                     <button
                       type="button"
@@ -805,14 +931,14 @@ function isValidExpiry(val: string): boolean {
                 </div>
               )}
 
-              {/* ══════════════════════════════════════════ */}
-              {/* STEP 3: REVIEW ORDER & CONFIRMATION       */}
-              {/* ══════════════════════════════════════════ */}
+              
+              
+              
               {currentStep === 3 && (
                 <div className="space-y-6 animate-in fade-in duration-200">
-                  {/* Summary Cards of Steps 1 & 2 */}
+                  
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {/* Delivery Summary */}
+                    
                     <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border space-y-2 text-xs font-sans">
                       <div className="flex items-center justify-between border-b border-border pb-2">
                         <span className="font-mono font-bold text-foreground uppercase flex items-center gap-1.5">
@@ -837,7 +963,7 @@ function isValidExpiry(val: string): boolean {
                       </p>
                     </div>
 
-                    {/* Payment Summary */}
+                    
                     <div className="p-4 sm:p-5 rounded-2xl bg-card border border-border space-y-2 text-xs font-sans">
                       <div className="flex items-center justify-between border-b border-border pb-2">
                         <span className="font-mono font-bold text-foreground uppercase flex items-center gap-1.5">
@@ -864,7 +990,7 @@ function isValidExpiry(val: string): boolean {
                     </div>
                   </div>
 
-                  {/* Order Items Review */}
+                  
                   <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-xs space-y-4">
                     <div className="flex items-center justify-between pb-3 border-b border-border">
                       <h2 className="font-display font-bold text-base sm:text-lg text-foreground">
@@ -952,7 +1078,7 @@ function isValidExpiry(val: string): boolean {
                     </div>
                   </div>
 
-                  {/* Final Place Order Actions */}
+                  
                   <div className="flex items-center justify-between pt-2 font-mono">
                     <button
                       type="button"
@@ -985,7 +1111,7 @@ function isValidExpiry(val: string): boolean {
               )}
             </div>
 
-            {/* Right Column: Sticky Order Summary (4 cols) */}
+            
             <aside className="lg:col-span-4 space-y-4 sticky top-24">
               <div className="p-5 sm:p-6 rounded-3xl bg-card border border-border shadow-md space-y-5">
                 <h3 className="font-display font-bold text-lg text-foreground pb-3 border-b border-border">
@@ -1024,7 +1150,7 @@ function isValidExpiry(val: string): boolean {
                     </span>
                   </div>
 
-                  {/* Grand Total */}
+                  
                   <div className="pt-3 border-t border-border flex items-baseline justify-between">
                     <div>
                       <span className="font-sans font-bold text-base text-foreground block">
@@ -1040,7 +1166,7 @@ function isValidExpiry(val: string): boolean {
                   </div>
                 </div>
 
-                {/* Assurance Highlights */}
+                
                 <div className="pt-3 border-t border-border space-y-2.5 text-[11px] font-sans text-muted-foreground">
                   <div className="flex items-center gap-2 text-foreground font-medium">
                     <ShieldCheck className="size-4 text-emerald-500 shrink-0" />
@@ -1056,7 +1182,7 @@ function isValidExpiry(val: string): boolean {
         )}
       </div>
 
-      {/* Add / Edit Address Modal */}
+      
       {isAddressModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-background/80 backdrop-blur-xs font-body animate-in fade-in duration-150">
           <div className="w-full max-w-lg rounded-3xl bg-card border border-border p-6 sm:p-8 space-y-4 shadow-2xl animate-in zoom-in-95">

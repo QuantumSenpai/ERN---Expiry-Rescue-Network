@@ -28,6 +28,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useTheme } from "@/context/ThemeContext";
 import { cn } from "@/lib/utils";
 
+import { useSearchParams } from "react-router-dom";
+import { KeyRound, ShieldCheck as ShieldCheckIcon } from "lucide-react";
+
 function getPasswordStrength(pass: string): {
   score: number;
   label: string;
@@ -35,9 +38,9 @@ function getPasswordStrength(pass: string): {
 } {
   if (!pass) return { score: 0, label: "", color: "bg-secondary" };
   let score = 0;
-  if (pass.length >= 8) score += 1;
-  if (/[A-Z]/.test(pass) && /[a-z]/.test(pass)) score += 1;
-  if (/\d/.test(pass) || /[^A-Za-z0-9]/.test(pass)) score += 1;
+  if (pass.length >= 6) score += 1;
+  if (/[A-Za-z]/.test(pass) && /[0-9]/.test(pass)) score += 1;
+  if (pass.length >= 10 || /[^A-Za-z0-9]/.test(pass)) score += 1;
 
   if (score === 1) return { score: 1, label: "Basic", color: "bg-destructive/60" };
   if (score === 2) return { score: 2, label: "Medium", color: "bg-secondary" };
@@ -48,9 +51,19 @@ export default function Signup() {
   const { signup } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const [role, setRole] = useState<"donor" | "buyer">("donor");
+  const roleParam = searchParams.get("role");
+  const initialRole: "admin" | "staff" | "user" =
+    roleParam === "admin"
+      ? "admin"
+      : roleParam === "staff" || roleParam === "retailer" || roleParam === "donor"
+      ? "staff"
+      : "user";
+
+  const [role, setRole] = useState<"admin" | "staff" | "user">(initialRole);
   const [buyerType, setBuyerType] = useState<"individual" | "ngo" | "orphanage">("individual");
+  const [adminInviteKey, setAdminInviteKey] = useState("");
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -62,6 +75,10 @@ export default function Signup() {
   const [error, setError] = useState<string | null>(null);
   const [focusedInput, setFocusedInput] = useState<string | null>(null);
 
+  const hasMinLength = password.length >= 6;
+  const hasLetters = /[A-Za-z]/.test(password);
+  const hasNumbers = /[0-9]/.test(password);
+  const isPasswordValid = hasMinLength && hasLetters && hasNumbers;
   const passwordStrength = getPasswordStrength(password);
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -72,15 +89,25 @@ export default function Signup() {
     const cleanEmail = email.trim();
 
     if (!cleanName) {
-      setError("Please enter your organization or personal name.");
+      setError(
+        role === "admin"
+          ? "Please enter your administrator name."
+          : role === "staff"
+          ? "Please enter your store or facility name."
+          : "Please enter your full name or organization."
+      );
       return;
     }
     if (!cleanEmail) {
       setError("Please enter a valid email address.");
       return;
     }
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    if (!isPasswordValid) {
+      setError("Password must be at least 6 characters long and contain both letters and numbers.");
+      return;
+    }
+    if (role === "admin" && !adminInviteKey.trim()) {
+      setError("Admin Invite Key is required for administrator registration.");
       return;
     }
     if (!agreed) {
@@ -96,7 +123,8 @@ export default function Signup() {
         email: cleanEmail,
         password,
         role,
-        buyer_type: role === "buyer" ? buyerType : undefined,
+        buyer_type: role === "user" ? buyerType : undefined,
+        admin_invite_key: role === "admin" ? adminInviteKey.trim() : undefined,
       });
 
       setIsSuccess(true);
@@ -277,18 +305,18 @@ export default function Signup() {
                     <Check className="size-7" />
                   </div>
                   <h3 className="font-display text-2xl font-bold text-foreground">
-                    Account Registered
+                    Account Created Successfully
                   </h3>
                   <p className="text-xs text-muted-foreground font-body leading-relaxed max-w-sm mx-auto">
-                    Your registration has been submitted. In accordance with ERN safety standards, accounts require administrative verification before portal activation.
+                    Your {role.toUpperCase()} account has been provisioned and registered in ERN. You may now sign in to your designated workspace.
                   </p>
                   <div className="pt-4">
                     <button
                       type="button"
-                      onClick={() => navigate("/login")}
+                      onClick={() => navigate(`/login?portal=${role}`)}
                       className="w-full py-3 px-4 rounded-full bg-primary text-primary-foreground font-mono text-xs font-bold uppercase tracking-wider cursor-pointer"
                     >
-                      Return to Sign In →
+                      Proceed to Sign In ({role.toUpperCase()}) →
                     </button>
                   </div>
                 </div>
@@ -296,15 +324,32 @@ export default function Signup() {
                 <>
                   <div className="space-y-1.5">
                     <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-secondary text-foreground text-xs font-mono font-bold uppercase">
-                      <span>Get Started</span>
+                      {role === "admin" ? (
+                        <>
+                          <ShieldCheckIcon className="size-3 text-accent" />
+                          <span>Enterprise Admin Registration</span>
+                        </>
+                      ) : role === "staff" ? (
+                        <span>Facility Staff Registration</span>
+                      ) : (
+                        <span>Community User Registration</span>
+                      )}
                     </div>
 
                     <h2 className="font-display text-2xl sm:text-3xl font-[400] text-foreground tracking-[-0.02em] leading-tight pt-1">
-                      Create an account
+                      {role === "admin"
+                        ? "Register Admin"
+                        : role === "staff"
+                        ? "Register Staff"
+                        : "Create User Account"}
                     </h2>
 
                     <p className="text-xs text-muted-foreground font-body">
-                      Join ERN to monitor shelf life, prevent waste, or claim lots.
+                      {role === "admin"
+                        ? "Provision an enterprise administrator workstation with global authority."
+                        : role === "staff"
+                        ? "Register your facility, supermarket, or warehouse store node."
+                        : "Join ERN to reserve near-expiry food lots, rescue inventory, and track orders."}
                     </p>
                   </div>
 
@@ -315,42 +360,56 @@ export default function Signup() {
                     </div>
                   )}
 
-                  
-                  <div className="p-1 rounded-full bg-secondary grid grid-cols-2 gap-1 text-xs font-mono">
+                  {/* 3-Way Registration Role Toggle */}
+                  <div className="p-1 rounded-full bg-secondary grid grid-cols-3 gap-1 text-xs font-mono">
                     <button
                       type="button"
-                      onClick={() => setRole("donor")}
+                      onClick={() => setRole("user")}
                       className={cn(
-                        "py-2 px-3 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-bold",
-                        role === "donor"
-                          ? "bg-primary text-primary-foreground shadow-none"
-                          : "text-muted-foreground hover:text-foreground"
-                      )}
-                    >
-                      <Store className="size-3.5" />
-                      <span>Retailer / Donor</span>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setRole("buyer")}
-                      className={cn(
-                        "py-2 px-3 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-bold",
-                        role === "buyer"
+                        "py-2 px-2.5 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-bold",
+                        role === "user"
                           ? "bg-primary text-primary-foreground shadow-none"
                           : "text-muted-foreground hover:text-foreground"
                       )}
                     >
                       <Users className="size-3.5" />
-                      <span>Buyer / Org</span>
+                      <span>User</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRole("staff")}
+                      className={cn(
+                        "py-2 px-2.5 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-bold",
+                        role === "staff"
+                          ? "bg-primary text-primary-foreground shadow-none"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <Store className="size-3.5" />
+                      <span>Staff</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setRole("admin")}
+                      className={cn(
+                        "py-2 px-2.5 rounded-full transition-all duration-150 cursor-pointer flex items-center justify-center gap-1.5 font-bold",
+                        role === "admin"
+                          ? "bg-primary text-primary-foreground shadow-none"
+                          : "text-muted-foreground hover:text-foreground"
+                      )}
+                    >
+                      <ShieldCheckIcon className="size-3.5" />
+                      <span>Admin</span>
                     </button>
                   </div>
 
-                  
-                  {role === "buyer" && (
+                  {/* Buyer Type Selector (for User role) */}
+                  {role === "user" && (
                     <div className="space-y-1.5 animate-in fade-in duration-200">
                       <label className="block text-xs font-mono uppercase text-muted-foreground font-bold">
-                        Buyer Organization Type
+                        User / Buyer Type
                       </label>
                       <div className="grid grid-cols-3 gap-1 p-1 bg-secondary rounded-full font-mono text-[11px]">
                         <button
@@ -393,11 +452,49 @@ export default function Signup() {
                     </div>
                   )}
 
+                  {/* Admin Invite Key Input (for Admin role) */}
+                  {role === "admin" && (
+                    <div className="space-y-1.5 animate-in fade-in duration-200">
+                      <div className="flex items-center justify-between">
+                        <label className="block text-xs font-mono uppercase text-accent font-bold flex items-center gap-1.5">
+                          <KeyRound className="size-3.5" />
+                          <span>Admin Invite Key (Required)</span>
+                        </label>
+                      </div>
+                      <div className="relative flex items-center">
+                        <KeyRound
+                          className={cn(
+                            "absolute left-3.5 size-4 transition-colors duration-150",
+                            focusedInput === "adminKey" ? "text-foreground" : "text-muted-foreground"
+                          )}
+                        />
+                        <input
+                          id="admin_invite_key"
+                          name="admin_invite_key"
+                          type="password"
+                          placeholder="ern_adm_..."
+                          value={adminInviteKey}
+                          onChange={(e) => setAdminInviteKey(e.target.value)}
+                          onFocus={() => setFocusedInput("adminKey")}
+                          onBlur={() => setFocusedInput(null)}
+                          required
+                          className="w-full pl-10 pr-3 py-2.5 bg-background border border-accent/40 focus:border-accent focus:bg-card rounded-lg text-xs sm:text-sm text-foreground placeholder:text-muted-foreground outline-none transition-all duration-150 font-mono shadow-none"
+                        />
+                      </div>
+                      <p className="text-[11px] font-mono text-muted-foreground">
+                        Requires authorized Enterprise Admin Invite Key to provision an administrative node.
+                      </p>
+                    </div>
+                  )}
+
                   <form onSubmit={handleSubmit} className="space-y-4">
-                    
                     <div className="space-y-1.5">
                       <label className="block text-xs font-mono uppercase text-muted-foreground font-bold">
-                        {role === "donor" ? "Store or Organization Name" : "Full Name or Organization"}
+                        {role === "admin"
+                          ? "Administrator Name"
+                          : role === "staff"
+                          ? "Facility or Store Name"
+                          : "Full Name or Organization"}
                       </label>
                       <div className="relative flex items-center">
                         <Building2
@@ -408,7 +505,13 @@ export default function Signup() {
                         />
                         <input
                           type="text"
-                          placeholder={role === "donor" ? "e.g. Metro Supermarket" : "e.g. Priya Sharma or Hope Trust"}
+                          placeholder={
+                            role === "admin"
+                              ? "e.g. Lead Infrastructure Admin"
+                              : role === "staff"
+                              ? "e.g. Metro Supermarket • Indiranagar"
+                              : "e.g. Priya Sharma"
+                          }
                           value={name}
                           onChange={(e) => setName(e.target.value)}
                           onFocus={() => setFocusedInput("name")}
@@ -419,10 +522,9 @@ export default function Signup() {
                       </div>
                     </div>
 
-                    
                     <div className="space-y-1.5">
                       <label className="block text-xs font-mono uppercase text-muted-foreground font-bold">
-                        Work email address
+                        {role === "admin" ? "Administrative Work Email" : "Email address"}
                       </label>
                       <div className="relative flex items-center">
                         <Mail
@@ -433,7 +535,13 @@ export default function Signup() {
                         />
                         <input
                           type="email"
-                          placeholder="operations@organization.com"
+                          placeholder={
+                            role === "admin"
+                              ? "admin.ops@ern-network.com"
+                              : role === "staff"
+                              ? "store.mgr@organization.com"
+                              : "user@example.com"
+                          }
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           onFocus={() => setFocusedInput("email")}
@@ -445,10 +553,9 @@ export default function Signup() {
                       </div>
                     </div>
 
-                    
                     <div className="space-y-1.5">
                       <label className="block text-xs font-mono uppercase text-muted-foreground font-bold">
-                        Password (min 8 chars)
+                        Password (min 6 characters, mixed alphanumeric)
                       </label>
                       <div className="relative flex items-center">
                         <Lock
@@ -458,8 +565,10 @@ export default function Signup() {
                           )}
                         />
                         <input
+                          id="signup_password"
+                          name="password"
                           type={showPassword ? "text" : "password"}
-                          placeholder="Minimum 8 characters"
+                          placeholder="Min 6 alphanumeric characters"
                           value={password}
                           onChange={(e) => setPassword(e.target.value)}
                           onFocus={() => setFocusedInput("password")}
@@ -478,22 +587,38 @@ export default function Signup() {
                         </button>
                       </div>
 
-                      {password && (
-                        <div className="flex items-center gap-2 pt-1">
-                          <div className="flex-1 h-1 rounded-full bg-secondary overflow-hidden">
-                            <div
-                              className={`h-full transition-all duration-300 ${passwordStrength.color}`}
-                              style={{ width: `${(passwordStrength.score / 3) * 100}%` }}
-                            />
-                          </div>
-                          <span className="text-[10px] font-mono text-muted-foreground">
+                      {/* Password Alphanumeric Validation Indicators */}
+                      <div className="flex items-center gap-2 pt-1 font-mono text-[11px]">
+                        <span
+                          className={cn(
+                            "px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1",
+                            hasMinLength
+                              ? "bg-primary/10 border-primary text-primary font-bold"
+                              : "bg-secondary border-border text-muted-foreground"
+                          )}
+                        >
+                          <Check className={cn("size-3", hasMinLength ? "opacity-100" : "opacity-30")} />
+                          <span>6+ chars</span>
+                        </span>
+                        <span
+                          className={cn(
+                            "px-2 py-0.5 rounded-full border transition-colors flex items-center gap-1",
+                            hasLetters && hasNumbers
+                              ? "bg-primary/10 border-primary text-primary font-bold"
+                              : "bg-secondary border-border text-muted-foreground"
+                          )}
+                        >
+                          <Check className={cn("size-3", hasLetters && hasNumbers ? "opacity-100" : "opacity-30")} />
+                          <span>Letters & Numbers</span>
+                        </span>
+                        {password && (
+                          <span className="ml-auto text-[10px] text-muted-foreground">
                             {passwordStrength.label}
                           </span>
-                        </div>
-                      )}
+                        )}
+                      </div>
                     </div>
 
-                    
                     <div className="pt-1">
                       <label className="flex items-start gap-2.5 cursor-pointer select-none text-xs">
                         <input
@@ -510,7 +635,6 @@ export default function Signup() {
                       </label>
                     </div>
 
-                    
                     <motion.button
                       whileHover={{ scale: 1.01 }}
                       whileTap={{ scale: 0.99 }}
@@ -538,18 +662,21 @@ export default function Signup() {
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
                           >
-                            CREATE WORKSPACE →
+                            {role === "admin"
+                              ? "REGISTER ADMIN →"
+                              : role === "staff"
+                              ? "REGISTER STAFF →"
+                              : "CREATE ACCOUNT →"}
                           </motion.span>
                         )}
                       </AnimatePresence>
                     </motion.button>
                   </form>
 
-                  
                   <div className="text-center text-xs text-muted-foreground font-body pt-2 border-t border-border">
                     Already have an account?{" "}
-                    <Link to="/login" className="text-foreground hover:underline font-bold">
-                      Sign in
+                    <Link to={`/login?portal=${role}`} className="text-foreground hover:underline font-bold">
+                      Sign in here
                     </Link>
                   </div>
                 </>

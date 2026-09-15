@@ -18,21 +18,21 @@ export default function BrandLogo({
   const isDark = theme === "dark";
 
   const iconSizes = {
-    sm: "size-8",
-    md: "size-10",
-    lg: "size-12",
+    sm: "size-9.5 sm:size-10",
+    md: "size-11",
+    lg: "size-13",
     xl: "size-16",
   }[size];
 
   const titleSizes = {
-    sm: "text-lg",
+    sm: "text-[19px] sm:text-xl",
     md: "text-xl",
     lg: "text-2xl",
     xl: "text-3xl",
   }[size];
 
   const subtitleSizes = {
-    sm: "text-[9px]",
+    sm: "text-[9px] sm:text-[9.5px]",
     md: "text-[10px]",
     lg: "text-[11px]",
     xl: "text-xs",

@@ -11,9 +11,10 @@ import {
   CheckCircle2,
   AlertTriangle,
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { api } from "@/lib/api";
 import { useToast } from "@/context/ToastContext";
+import { useAuth } from "@/context/AuthContext";
 
 const CATEGORIES = [
   "Dairy",
@@ -28,7 +29,9 @@ const CATEGORIES = [
 
 export default function AddProduct() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { showToast } = useToast();
+  const { user } = useAuth();
 
   const [name, setName] = useState("");
   const [brand, setBrand] = useState("");
@@ -75,8 +78,9 @@ export default function AddProduct() {
         image_url: imageUrl.trim() || undefined,
       });
 
-      showToast(`Listing created! Rescued price set to ₹${res.discount_price.toFixed(2)} (${res.days_left}d shelf-life).`);
-      navigate("/retailer/inventory");
+      const isAdminRoute = location.pathname.startsWith("/admin") || user?.role === "admin";
+      const targetRoute = isAdminRoute ? "/admin/inventory" : "/retailer/inventory";
+      navigate(targetRoute);
     } catch (err: unknown) {
       if (err instanceof Error) {
         setError(err.message);

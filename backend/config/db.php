@@ -27,11 +27,9 @@ function load_ern_env(): void {
                     $val = substr($val, 1, -1);
                 }
 
-                if (getenv($key) === false) {
-                    putenv("$key=$val");
-                    $_ENV[$key] = $val;
-                    $_SERVER[$key] = $val;
-                }
+                putenv("$key=$val");
+                $_ENV[$key] = $val;
+                $_SERVER[$key] = $val;
             }
         }
     }
@@ -85,30 +83,23 @@ $options = [
     PDO::ATTR_TIMEOUT            => 5,
 ];
 
-$bridgeActive = false;
-$checkSocket = @fsockopen('127.0.0.1', 5433, $errno, $errstr, 0.05);
-if ($checkSocket) {
-    fclose($checkSocket);
-    $bridgeActive = true;
-}
-
-if ($bridgeActive) {
-    $dsn = "pgsql:host=127.0.0.1;port=5433;dbname={$dbName};sslmode=disable";
-} else {
-    $dsn = "pgsql:host={$dbHost};port={$dbPort};dbname={$dbName};sslmode={$dbSslMode}";
-}
-
 try {
+    $dsn = "pgsql:host=127.0.0.1;port=5433;dbname={$dbName};sslmode=disable";
     $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
-} catch (PDOException $e) {
-    http_response_code(500);
-    header('Content-Type: application/json');
-    echo json_encode([
-        "success" => false,
-        "error" => [
-            "code"    => "DB_CONNECTION_FAILED",
-            "message" => "Could not connect to database. Ensure DATABASE_URL is configured with valid Neon Postgres credentials and pdo_pgsql is enabled."
-        ]
-    ]);
-    exit;
+} catch (PDOException $eBridge) {
+    try {
+        $dsn = "pgsql:host={$dbHost};port={$dbPort};dbname={$dbName};sslmode={$dbSslMode}";
+        $pdo = new PDO($dsn, $dbUser, $dbPass, $options);
+    } catch (PDOException $e) {
+        http_response_code(500);
+        header('Content-Type: application/json');
+        echo json_encode([
+            "success" => false,
+            "error" => [
+                "code"    => "DB_CONNECTION_FAILED",
+                "message" => "Could not connect to database. Ensure DATABASE_URL is configured with valid Neon Postgres credentials and pdo_pgsql is enabled."
+            ]
+        ]);
+        exit;
+    }
 }

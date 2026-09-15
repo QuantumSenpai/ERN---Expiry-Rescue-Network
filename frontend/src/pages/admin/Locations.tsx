@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Building2,
   Store,
@@ -19,10 +19,12 @@ import {
   History,
   HeartPulse,
   Edit2,
+  RefreshCw,
 } from "lucide-react";
 import { useNavigate, Link } from "react-router-dom";
 import AnimatedNumber from "@/components/AnimatedNumber";
 import TransferReviewModal from "@/components/TransferReviewModal";
+import { api, type ApiLocation } from "@/lib/api";
 
 export type LocationType = "Store" | "Warehouse" | "Distribution Center" | "Facility";
 export type LocationStatus = "Active" | "Inactive" | "Pending Setup";
@@ -200,9 +202,60 @@ export default function Locations() {
   const navigate = useNavigate();
 
   const [locationsList, setLocationsList] = useState<OrgLocation[]>(INITIAL_LOCATIONS);
+  const [isLoading, setIsLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [typeFilter, setTypeFilter] = useState<string>("All");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+
+  const fetchLocations = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.admin.allLocations();
+      if (data && data.length > 0) {
+        setLocationsList(
+          data.map((l) => ({
+            id: `loc-${l.id}`,
+            code: l.code,
+            name: l.name,
+            type: l.type as LocationType,
+            manager: l.manager_name || "Regional Manager",
+            managerEmail: l.manager_email || "manager@ern-network.com",
+            address: l.address || "Main Logistics Bay, Bangalore",
+            city: l.city || "Bangalore",
+            region: l.region || "Karnataka",
+            country: "India",
+            phone: l.phone || "+91 80 2800 0000",
+            status: l.status as LocationStatus,
+            totalProducts: l.total_products || 350,
+            expiryTracked: 95,
+            nonExpiry: 255,
+            expiryRiskCount: 18,
+            needsAttention: 5,
+            inventoryValue: l.inventory_value || 420000,
+            assignedUsersCount: 6,
+            lastUpdated: "Recently synced",
+            expiryBreakdown: {
+              critical: 3,
+              high: 8,
+              medium: 14,
+              safe: 70,
+            },
+            recentActivity: [
+              { action: "Facility verified and telemetry connected", time: "Today · Active" },
+            ],
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to load locations from database:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchLocations();
+  }, [fetchLocations]);
 
   const [sortField, setSortField] = useState<keyof OrgLocation>("name");
   const [sortAsc, setSortAsc] = useState(true);

@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import {
   Plus,
   Search,
@@ -14,8 +14,10 @@ import {
   Boxes,
   MapPin,
   Barcode,
+  RefreshCw,
 } from "lucide-react";
 import AnimatedNumber from "@/components/AnimatedNumber";
+import { api, type ApiSupplier } from "@/lib/api";
 
 export type SupplierStatus = "Active" | "Pending Review" | "Inactive" | "Suspended";
 export type POStatus =
@@ -185,6 +187,44 @@ export default function AdminSuppliers() {
   const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const fetchSuppliers = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const data = await api.admin.allSuppliers();
+      if (data && data.length > 0) {
+        setSuppliers(
+          data.map((s) => ({
+            id: `sup-${s.id}`,
+            code: s.code,
+            name: s.name,
+            category: s.category,
+            status: s.status as SupplierStatus,
+            primaryContact: s.contact_name || "Operations Lead",
+            email: s.email,
+            phone: s.phone || "+91 80 4000 1200",
+            address: s.address || "Bengaluru, India",
+            totalProducts: 14,
+            lastOrderDate: "Recent",
+            performance: {
+              totalOrders: 12,
+              onTimeDelivery: s.rating >= 4.8 ? 98.5 : 94.0,
+              fillRate: 97.2,
+            },
+          }))
+        );
+      }
+    } catch (err) {
+      console.error("Failed to fetch suppliers:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchSuppliers();
+  }, [fetchSuppliers]);
 
   // Controlled Add Supplier Form State
   const [newSupplierName, setNewSupplierName] = useState("");
@@ -221,31 +261,45 @@ export default function AdminSuppliers() {
       return;
     }
 
-    const nextCodeNum = suppliers.length + 1;
-    const code = `SUP-${String(nextCodeNum).padStart(3, "0")}`;
-
-    const newSup: Supplier = {
-      id: `sup-${Date.now()}`,
-      code,
-      name,
-      category: newSupplierCategory,
-      status: "Active",
-      primaryContact: newSupplierContact.trim() || "Operations Lead",
-      email,
-      phone: newSupplierPhone.trim() || "+91 80 4000 1200",
-      address: newSupplierAddress.trim() || "Industrial Area, Bengaluru",
-      totalProducts: 12,
-      lastOrderDate: "Just now",
-      performance: {
-        totalOrders: 1,
-        onTimeDelivery: 98.5,
-        fillRate: 99.0,
-      },
-    };
-
-    setSuppliers((prev) => [newSup, ...prev]);
-    setIsAddModalOpen(false);
-    showToast(`Supplier ${name} (${code}) added to active directory.`);
+    try {
+      api.admin
+        .createSupplier({
+          name,
+          email,
+          category: newSupplierCategory,
+          contact_name: newSupplierContact.trim(),
+          phone: newSupplierPhone.trim(),
+          address: newSupplierAddress.trim(),
+        })
+        .then((res) => {
+          const newSup: Supplier = {
+            id: `sup-${res.id}`,
+            code: res.code,
+            name: res.name,
+            category: newSupplierCategory,
+            status: "Active",
+            primaryContact: newSupplierContact.trim() || "Operations Lead",
+            email,
+            phone: newSupplierPhone.trim() || "+91 80 4000 1200",
+            address: newSupplierAddress.trim() || "Industrial Area, Bengaluru",
+            totalProducts: 12,
+            lastOrderDate: "Just now",
+            performance: {
+              totalOrders: 1,
+              onTimeDelivery: 98.5,
+              fillRate: 99.0,
+            },
+          };
+          setSuppliers((prev) => [newSup, ...prev]);
+          setIsAddModalOpen(false);
+          showToast(`Supplier ${name} (${res.code}) persisted to Neon database.`);
+        })
+        .catch((err) => {
+          setAddSupplierError(err instanceof Error ? err.message : "Failed to persist supplier.");
+        });
+    } catch (err) {
+      setAddSupplierError("Network error while creating supplier.");
+    }
   };
 
   const showToast = (msg: string) => {

@@ -1,9 +1,9 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth, getRoleHomeRoute } from "@/context/AuthContext";
 import BrandLogo from "@/components/BrandLogo";
 import ThemeSwitcher from "@/components/ThemeSwitcher";
-import { LayoutDashboard, LogOut, Menu, X, ArrowRight } from "lucide-react";
+import { LayoutDashboard, LogOut, Menu, X, ArrowRight, ShieldCheck } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -56,13 +56,13 @@ export default function Navbar() {
       }`}
     >
       <header
-        className={`pointer-events-auto w-full text-foreground shadow-none transition-[max-width,border-radius,padding,background-color,backdrop-filter,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`pointer-events-auto w-full text-foreground transition-[max-width,border-radius,padding,background-color,backdrop-filter,box-shadow,border-color] duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
           isScrolled
-            ? "max-w-full rounded-none border-x-0 border-t-0 border-b border-border bg-card/90 backdrop-blur-xl px-4 sm:px-8 py-3"
-            : "max-w-5xl rounded-full border border-border bg-card px-4 sm:px-6 py-2.5"
+            ? "max-w-full rounded-none border-x-0 border-t-0 border-b border-border/70 bg-card/90 dark:bg-card/85 backdrop-blur-xl px-4 sm:px-8 py-3 shadow-xs"
+            : "max-w-6xl rounded-full border border-border/70 bg-card/85 dark:bg-card/80 backdrop-blur-md px-5 sm:px-7 py-2.5 shadow-xs"
         }`}
       >
-        <div className="flex items-center justify-between w-full gap-2">
+        <div className="flex items-center justify-between w-full gap-3 sm:gap-6">
           {/* Brand Logo (ERN) */}
           <Link
             to="/"
@@ -72,8 +72,8 @@ export default function Navbar() {
             <BrandLogo variant="auto" size="sm" showText={true} />
           </Link>
 
-          {/* Nav Links in Poppins/Inter */}
-          <nav className="hidden md:flex items-center gap-1 text-xs sm:text-sm font-semibold text-foreground">
+          {/* Nav Links */}
+          <nav className="hidden md:flex items-center gap-1 sm:gap-1.5 text-[13px] font-medium text-foreground/80">
             <button
               onClick={() => handleNavClick("platform")}
               className="hover:text-foreground transition-colors px-3 py-1.5 rounded-full hover:bg-secondary cursor-pointer"
@@ -99,10 +99,20 @@ export default function Navbar() {
               Impact
             </button>
 
+            {!user && (
+              <Link
+                to="/admin/login"
+                className="hover:text-foreground transition-colors px-3 py-1.5 rounded-full hover:bg-secondary inline-flex items-center gap-1.5 text-[13px] font-medium text-foreground/80"
+              >
+                <ShieldCheck className="size-3.5 text-primary dark:text-sky-400" />
+                <span>Admin</span>
+              </Link>
+            )}
+
             {user && (
               <Link
                 to={getDashboardPath()}
-                className="hover:text-foreground transition-colors px-3.5 py-1.5 rounded-full hover:bg-secondary flex items-center gap-1.5 font-semibold"
+                className="hover:text-foreground transition-colors px-3.5 py-1.5 rounded-full hover:bg-secondary flex items-center gap-1.5 font-semibold text-foreground"
               >
                 <LayoutDashboard className="size-3.5" />
                 <span>Dashboard</span>
@@ -111,7 +121,7 @@ export default function Navbar() {
           </nav>
 
           {/* Right Action Pill Controls */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             {/* Theme Switcher */}
             <ThemeSwitcher variant="compact" className="hidden sm:inline-flex" />
 
@@ -190,6 +200,14 @@ export default function Navbar() {
             >
               Impact
             </button>
+            <Link
+              to="/admin/login"
+              onClick={() => setMobileMenuOpen(false)}
+              className="text-left px-3 py-2 rounded-xl hover:bg-secondary flex items-center gap-2 font-mono text-xs text-primary dark:text-sky-400 font-bold border-t border-border/50 pt-2.5 mt-1"
+            >
+              <ShieldCheck className="size-3.5" />
+              <span>Enterprise Admin Portal</span>
+            </Link>
           </div>
         )}
       </header>
