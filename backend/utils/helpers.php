@@ -7,7 +7,7 @@ require_once __DIR__ . '/jwt.php';
 $allowedOrigin = getenv('CORS_ALLOWED_ORIGIN') ?: '*';
 $requestOrigin = $_SERVER['HTTP_ORIGIN'] ?? '';
 if ($requestOrigin !== '') {
-    if ($allowedOrigin === '*' || $requestOrigin === $allowedOrigin || $requestOrigin === 'http://localhost:5173' || $requestOrigin === 'http://127.0.0.1:5173') {
+    if ($allowedOrigin === '*' || $requestOrigin === $allowedOrigin || preg_match('#^https?://(localhost|127\.0\.0\.1)(:\d+)?$#', $requestOrigin)) {
         $allowedOrigin = $requestOrigin;
     }
 }
